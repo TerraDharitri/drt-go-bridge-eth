@@ -1,0 +1,12 @@
+package mappers
+
+import "context"
+
+// DataGetter defines the interface able to handle get requests for DharitrI blockchain
+type DataGetter interface {
+	GetTokenIdForErc20Address(ctx context.Context, erc20Address []byte) ([][]byte, error)
+	GetERC20AddressForTokenId(ctx context.Context, tokenId []byte) ([][]byte, error)
+	GetTokenIdForSuiCoin(ctx context.Context, tokenId []byte) ([][]byte, error)
+	GetSuiCoinForTokenId(ctx context.Context, tokenId []byte) ([][]byte, error)
+	IsInterfaceNil() bool
+}

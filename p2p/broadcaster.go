@@ -1,0 +1,325 @@
+package p2p
+
+import (
+	"encoding/hex"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/TerraDharitri/drt-go-bridge-eth/core"
+	chainCore "github.com/TerraDharitri/drt-go-chain-core/core"
+	"github.com/TerraDharitri/drt-go-chain-core/core/check"
+	"github.com/TerraDharitri/drt-go-chain-core/marshal"
+	crypto "github.com/TerraDharitri/drt-go-chain-crypto"
+	"github.com/TerraDharitri/drt-go-chain-communication/p2p"
+	"github.com/TerraDharitri/drt-go-chain/process/throttle/antiflood/factory"
+	logger "github.com/TerraDharitri/drt-go-chain-logger"
+	"github.com/TerraDharitri/drt-go-sdk/data"
+)
+
+const (
+	joinTopicSuffix        = "_join"
+	signTopicSuffix        = "_sign"
+	defaultTopicIdentifier = "default"
+	joinTopicMessage       = "join topic"
+)
+
+// ArgsBroadcaster is the DTO used in the broadcaster constructor
+type ArgsBroadcaster struct {
+	Messenger              NetMessenger
+	Log                    logger.Logger
+	DharitrIRoleProvider DharitrIRoleProvider
+	SignatureProcessor     SignatureProcessor
+	KeyGen                 crypto.KeyGenerator
+	SingleSigner           crypto.SingleSigner
+	PrivateKey             crypto.PrivateKey
+	Name                   string
+	AntifloodComponents    *factory.AntiFloodComponents
+}
+
+type broadcaster struct {
+	*relayerMessageHandler
+	*noncesOfPublicKeys
+	messenger             NetMessenger
+	log                   logger.Logger
+	dharitriRoleProvider DharitrIRoleProvider
+	signatureProcessor    SignatureProcessor
+	name                  string
+	mutClients            sync.RWMutex
+	clients               []core.BroadcastClient
+	joinTopicName         string
+	signTopicName         string
+}
+
+// NewBroadcaster will create a new broadcaster able to pass messages and signatures
+func NewBroadcaster(args ArgsBroadcaster) (*broadcaster, error) {
+	err := checkArgs(args)
+	if err != nil {
+		return nil, err
+	}
+
+	b := &broadcaster{
+		name:                  args.Name,
+		messenger:             args.Messenger,
+		noncesOfPublicKeys:    newNoncesOfPublicKeys(),
+		log:                   args.Log,
+		dharitriRoleProvider: args.DharitrIRoleProvider,
+		signatureProcessor:    args.SignatureProcessor,
+		relayerMessageHandler: &relayerMessageHandler{
+			marshalizer:         &marshal.JsonMarshalizer{},
+			keyGen:              args.KeyGen,
+			singleSigner:        args.SingleSigner,
+			counter:             uint64(time.Now().UnixNano()),
+			privateKey:          args.PrivateKey,
+			antifloodComponents: args.AntifloodComponents,
+		},
+		clients:       make([]core.BroadcastClient, 0),
+		joinTopicName: args.Name + joinTopicSuffix,
+		signTopicName: args.Name + signTopicSuffix,
+	}
+	pk := b.privateKey.GeneratePublic()
+	b.publicKeyBytes, err = pk.ToByteArray()
+	if err != nil {
+		return nil, err
+	}
+
+	return b, err
+}
+
+func checkArgs(args ArgsBroadcaster) error {
+	if len(args.Name) == 0 {
+		return ErrEmptyName
+	}
+	if check.IfNil(args.Log) {
+		return ErrNilLogger
+	}
+	if check.IfNil(args.KeyGen) {
+		return ErrNilKeyGenerator
+	}
+	if check.IfNil(args.PrivateKey) {
+		return ErrNilPrivateKey
+	}
+	if check.IfNil(args.SingleSigner) {
+		return ErrNilSingleSigner
+	}
+	if check.IfNil(args.DharitrIRoleProvider) {
+		return ErrNilDharitrIRoleProvider
+	}
+	if check.IfNil(args.Messenger) {
+		return ErrNilMessenger
+	}
+	if check.IfNil(args.SignatureProcessor) {
+		return ErrNilSignatureProcessor
+	}
+	if args.AntifloodComponents == nil {
+		return ErrNilAntifloodComponents
+	}
+
+	return nil
+}
+
+// RegisterOnTopics will register the messenger on all required topics
+func (b *broadcaster) RegisterOnTopics() error {
+	topics := []string{b.joinTopicName, b.signTopicName}
+	for _, topic := range topics {
+		err := b.messenger.CreateTopic(topic, true)
+		if err != nil {
+			return err
+		}
+
+		err = b.messenger.RegisterMessageProcessor(topic, defaultTopicIdentifier, b)
+		if err != nil {
+			return err
+		}
+
+		b.log.Info("registered", "topic", topic)
+	}
+
+	return nil
+}
+
+// ProcessReceivedMessage will be called by the network messenger whenever a new message is received
+func (b *broadcaster) ProcessReceivedMessage(message p2p.MessageP2P, fromConnectedPeer chainCore.PeerID, _ p2p.MessageHandler) ([]byte, error) {
+	msg, err := b.preProcessMessage(message, fromConnectedPeer)
+	if err != nil {
+		b.log.Debug("got message", "topic", message.Topic(), "error", err)
+		return nil, err
+	}
+
+	addr := data.NewAddressFromBytes(msg.PublicKeyBytes)
+	hexPkBytes := hex.EncodeToString(msg.PublicKeyBytes)
+	if !b.dharitriRoleProvider.IsWhitelisted(addr) {
+		return nil, fmt.Errorf("%w for peer: %s", ErrPeerNotWhitelisted, hexPkBytes)
+	}
+
+	address, _ := addr.AddressAsBech32String()
+	b.log.Trace("got message", "topic", message.Topic(),
+		"msg.Payload", msg.Payload, "msg.Nonce", msg.Nonce, "msg.PublicKey", address)
+
+	err = b.processNonce(msg)
+	if err != nil {
+		// someone might try to send old, already seen by the network, messages
+		// drop the message and do not resend-it to other relayers
+		return nil, err
+	}
+
+	err = b.canProcessMessage(message, fromConnectedPeer)
+	if err != nil {
+		b.log.Debug("can't process message", "peer", fromConnectedPeer, "topic", message.Topic(), "msg.Payload", msg.Payload,
+			"msg.Nonce", msg.Nonce, "msg.PublicKey", address, "error", err)
+		return nil, err
+	}
+
+	switch message.Topic() {
+	case b.joinTopicName:
+		b.processJoinMessage(message)
+	case b.signTopicName:
+		b.processSignMessage(msg)
+	}
+
+	return nil, nil
+}
+
+func (b *broadcaster) processJoinMessage(message p2p.MessageP2P) {
+	err := b.broadcastCurrentSignatures(message.Peer())
+	if err != nil {
+		b.log.Error(err.Error())
+	}
+}
+
+func (b *broadcaster) getPeerChainSignature(msg *core.SignedMessage) (*core.PeerChainSignature, error) {
+	signature := &core.PeerChainSignature{}
+	err := b.marshalizer.Unmarshal(signature, msg.Payload)
+	if err != nil {
+		return nil, err
+	}
+
+	err = b.signatureProcessor.VerifySignature(signature.Signature, signature.MessageHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return signature, nil
+}
+
+func (b *broadcaster) processSignMessage(msg *core.SignedMessage) {
+	ethSignature, err := b.getPeerChainSignature(msg)
+	if err != nil {
+		b.log.Debug("received message does not contain a valid signature", "error", err)
+		return
+	}
+
+	b.notifyClients(msg, ethSignature)
+}
+
+func (b *broadcaster) notifyClients(msg *core.SignedMessage, ethMsg *core.PeerChainSignature) {
+	b.mutClients.RLock()
+	defer b.mutClients.RUnlock()
+
+	for _, client := range b.clients {
+		client.ProcessNewMessage(msg, ethMsg)
+	}
+}
+
+func (b *broadcaster) broadcastCurrentSignatures(peerId chainCore.PeerID) error {
+	allMessages := b.retrieveUniqueMessages()
+
+	for _, msg := range allMessages {
+		err := b.sendSignedMessageToPeer(msg, peerId)
+		if err != nil {
+			b.log.Debug("error sending current stored signatures",
+				"error", err.Error(), "peer", peerId.Pretty())
+		}
+	}
+
+	return nil
+}
+
+func (b *broadcaster) retrieveUniqueMessages() map[string]*core.SignedMessage {
+	allMessages := make(map[string]*core.SignedMessage)
+	for _, client := range b.clients {
+		messages := client.AllStoredSignatures()
+		for _, msg := range messages {
+			allMessages[msg.UniqueID()] = msg
+		}
+	}
+
+	return allMessages
+}
+
+func (b *broadcaster) sendSignedMessageToPeer(msg *core.SignedMessage, peerId chainCore.PeerID) error {
+	buff, err := b.marshalizer.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	return b.messenger.SendToConnectedPeer(b.signTopicName, buff, peerId)
+}
+
+// BroadcastSignature will send the provided signature as payload in a wrapped signed message to the other peers.
+// It will broadcast the message to all available peers
+func (b *broadcaster) BroadcastSignature(signature []byte, messageHash []byte) {
+	ethSig := &core.PeerChainSignature{
+		Signature:   signature,
+		MessageHash: messageHash,
+	}
+
+	payload, err := b.marshalizer.Marshal(ethSig)
+	if err != nil {
+		b.log.Error("error creating signature payload", "error", err)
+	}
+
+	err = b.broadcastMessage(payload, b.signTopicName)
+	if err != nil {
+		b.log.Error("error sending signature", "error", err)
+	}
+}
+
+// BroadcastJoinTopic will send the provided signature as payload in a wrapped signed message to the other peers.
+// It will broadcast the message to all available peers
+func (b *broadcaster) BroadcastJoinTopic() {
+	err := b.broadcastMessage([]byte(joinTopicMessage), b.joinTopicName)
+	if err != nil {
+		b.log.Error("error sending signature", "error", err)
+	}
+}
+
+func (b *broadcaster) broadcastMessage(payload []byte, topic string) error {
+	msg, err := b.createMessage(payload)
+	if err != nil {
+		return err
+	}
+
+	buff, err := b.marshalizer.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	b.messenger.Broadcast(topic, buff)
+
+	return nil
+}
+
+// AddBroadcastClient will add a client to the list so it can be notified of the newly received
+// messages
+func (b *broadcaster) AddBroadcastClient(client core.BroadcastClient) error {
+	if check.IfNil(client) {
+		return ErrNilBroadcastClient
+	}
+
+	b.mutClients.Lock()
+	b.clients = append(b.clients, client)
+	b.mutClients.Unlock()
+
+	return nil
+}
+
+// Close will close any containing members and clean any go routines associated
+func (b *broadcaster) Close() error {
+	return b.messenger.Close()
+}
+
+// IsInterfaceNil returns true if there is no value under the interface
+func (b *broadcaster) IsInterfaceNil() bool {
+	return b == nil
+}

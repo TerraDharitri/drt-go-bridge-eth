@@ -1,0 +1,16 @@
+services:
+ chain-simulator:
+  image: dharitri/chainsimulator:v1.10.4-patch1
+  ports:
+    - 8085:8085
+  volumes:
+    - "../scripts:/docker/scripts"
+  entrypoint: "./chainsimulator -log-level *:INFO"
+
+ sui:
+  image: mysten/sui-tools:testnet-arm64
+  ports:
+    - "9000:9000"  # Sui RPC port
+    - "9123:9123"  # Sui faucet port
+  command: >
+   sui start --with-faucet --force-regenesis
