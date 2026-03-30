@@ -90,11 +90,23 @@ jobs:
         run: ls -R
         working-directory: assets
 
-      - name: Create release
+  attach-on-release:
+    if: github.event_name == 'release'
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+
+      - name: Download all workflow artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Upload artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          hub release create --draft --message="Release draft from Github Actions" vNext
-          for i in $(find ./assets -name '*.tgz' -type f); do
-            hub release edit --attach=${i} --message="" vNext
-          done
+          gh release upload ${{ github.ref_name }} $(find ./artifacts -type f)
