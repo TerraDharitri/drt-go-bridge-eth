@@ -1,0 +1,9 @@
+OverridableConfigTomlValues = [
+    { File = "systemSmartContractsConfig.toml", Path = "DCDTSystemSCConfig.BaseIssuingCost", Value = "50000000000000000" },
+    { File = "config.toml", Path = "Debug.Process.Enabled", Value = false },
+    { File = "config.toml", Path = "VirtualMachine.Execution.WasmVMVersions", Value = [{ StartEpoch = 0, Version = "2.0" }]},
+    { File = "config.toml", Path = "VirtualMachine.Querying.WasmVMVersions", Value = [{ StartEpoch = 0, Version = "2.0" }]},
+    { File = "config.toml", Path = "WebServerAntiflood.WebServerAntifloodEnabled", Value = false},
+    { File = "config.toml", Path = "WebServerAntiflood.SimultaneousRequests", Value = 100000},
+    { File = "config.toml", Path = "WebServerAntiflood.SameSourceRequests", Value = 1000000}
+]
