@@ -402,7 +402,9 @@ func TestSuiDharitrIBridgeComponents_SuiRelayerAddresses(t *testing.T) {
 	t.Parallel()
 
 	args := createMockSuiDharitrIBridgeArgs()
-	components, _ := NewSuiDrtBridgeComponents(args)
+	components, err := NewSuiDrtBridgeComponents(args)
+	require.Nil(t, err)
+	require.NotNil(t, components)
 
 	assert.Equal(t, "0xde91225b70964422bbaea44f2b77bf76e962eb7b1607039783bd2af31e96ce74", components.PeerChainRelayerAddress())
 }
