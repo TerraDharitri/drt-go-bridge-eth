@@ -651,32 +651,40 @@ func (handler *DharitriHandler) transferChainSpecificTokenToSCs(ctx context.Cont
 
 	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
 
-	// transfer to wrapper sc
-	initialMintValue := valueToMintInt.Div(valueToMintInt, big.NewInt(3))
-	hash, txResult := handler.ChainSimulator.ScCall(
+	// split amount
+	initialMintValue := big.NewInt(0).Div(valueToMintInt, big.NewInt(3))
+
+	//transfer to wrapper SC
+	dataWrapper := "DCDTTransfer@" +
+		hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)) + "@" +
+		hex.EncodeToString(initialMintValue.Bytes()) + "@" +
+		hex.EncodeToString([]byte(depositLiquidityFunction))
+
+	hash, txResult := handler.ChainSimulator.SendTx(
 		ctx,
 		handler.OwnerKeys.DrtSk,
-		handler.WrapperAddress,
+		handler.WrapperAddress,   //receiver stays SAME
 		zeroStringValue,
 		setCallsGasLimit,
-		dcdtTransferFunction,
-		[]string{
-			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
-			hex.EncodeToString(initialMintValue.Bytes()),
-			hex.EncodeToString([]byte(depositLiquidityFunction))})
+		[]byte(dataWrapper),
+	)
+
 	log.Info("transfer to wrapper sc tx executed", "hash", hash, "status", txResult.Status)
 
-	// transfer to safe sc
-	hash, txResult = handler.ChainSimulator.ScCall(
+	//transfer to safe SC 
+	dataSafe := "DCDTTransfer@" +
+		hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)) + "@" +
+		hex.EncodeToString(initialMintValue.Bytes())
+
+	hash, txResult = handler.ChainSimulator.SendTx(
 		ctx,
 		handler.OwnerKeys.DrtSk,
-		handler.SafeAddress,
+		handler.SafeAddress,   //receiver stays SAME
 		zeroStringValue,
 		setCallsGasLimit,
-		dcdtTransferFunction,
-		[]string{
-			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
-			hex.EncodeToString(initialMintValue.Bytes())})
+		[]byte(dataSafe),
+	)
+
 	log.Info("transfer to safe sc tx executed", "hash", hash, "status", txResult.Status)
 }
 
@@ -800,20 +808,21 @@ func (handler *DharitriHandler) setInitialSupply(ctx context.Context, params Iss
 			log.Info("initial supply tx executed", "hash", hash, "status", txResult.Status,
 				"initial mint", params.InitialSupplyValue, "initial burned", "0")
 		} else {
-			hash, txResult := handler.ChainSimulator.ScCall(
-				ctx,
-				handler.OwnerKeys.DrtSk,
-				handler.MultisigAddress,
-				zeroStringValue,
-				setCallsGasLimit,
-				dcdtTransferFunction,
-				[]string{
-					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
-					hex.EncodeToString(initialSupply.Bytes()),
-					hex.EncodeToString([]byte(initSupplyDcdtSafe)),
-					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
-					hex.EncodeToString(initialSupply.Bytes()),
-				})
+				data := "DCDTTransfer@" +
+					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)) + "@" +
+					hex.EncodeToString(initialSupply.Bytes()) + "@" +
+					hex.EncodeToString([]byte(initSupplyDcdtSafe)) + "@" +
+					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)) + "@" +
+					hex.EncodeToString(initialSupply.Bytes())
+
+				hash, txResult := handler.ChainSimulator.SendTx(
+					ctx,
+					handler.OwnerKeys.DrtSk,
+					handler.MultisigAddress,   //SAME receiver
+					zeroStringValue,
+					setCallsGasLimit,
+					[]byte(data),
+				)
 
 			log.Info("initial supply tx executed", "hash", hash, "status", txResult.Status,
 				"initial value", params.InitialSupplyValue)
@@ -949,16 +958,16 @@ func (handler *DharitriHandler) createTransactionWithoutUnwrap(ctx context.Conte
 		hex.EncodeToString([]byte(createTransactionFunction)),
 		hex.EncodeToString(receiver),
 	}
-	dataField := strings.Join(params, "@")
 
-	hash, txResult := handler.ChainSimulator.ScCall(
+	data := "DCDTTransfer@" + strings.Join(params, "@")
+
+	hash, txResult := handler.ChainSimulator.SendTx(
 		ctx,
 		handler.TestKeys.DrtSk,
-		handler.SafeAddress,
+		handler.SafeAddress,   // ✅ same receiver
 		zeroStringValue,
-		createDepositGasLimit+gasLimitPerDataByte*uint64(len(dataField)),
-		dcdtTransferFunction,
-		params,
+		createDepositGasLimit+gasLimitPerDataByte*uint64(len(data)),	
+		[]byte(data),
 	)
 	log.Info("DharitrI -> peer chain createTransaction sent", "hash", hash, "token", token.DrtUniversalToken, "status", txResult.Status)
 }
@@ -973,17 +982,18 @@ func (handler *DharitriHandler) unwrapCreateTransaction(ctx context.Context, tok
 		hex.EncodeToString(handler.SafeAddress.Bytes()),
 		hex.EncodeToString(receiver),
 	}
-	dataField := strings.Join(params, "@")
 
-	hash, txResult := handler.ChainSimulator.ScCall(
+	data := "DCDTTransfer@" + strings.Join(params, "@")
+
+	hash, txResult := handler.ChainSimulator.SendTx(
 		ctx,
 		handler.TestKeys.DrtSk,
-		handler.WrapperAddress,
+		handler.WrapperAddress,   //same receiver
 		zeroStringValue,
-		createDepositGasLimit+gasLimitPerDataByte*uint64(len(dataField)),
-		dcdtTransferFunction,
-		params,
+		createDepositGasLimit+gasLimitPerDataByte*uint64(len(data)),
+		[]byte(data),
 	)
+
 	log.Info("DharitrI -> peer chain unwrapCreateTransaction sent", "hash", hash, "token", token.DrtUniversalToken, "status", txResult.Status)
 }
 
@@ -1046,16 +1056,18 @@ func (handler *DharitriHandler) TransferToken(ctx context.Context, source KeysHo
 	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
 
 	// transfer to the test key, so it will have funds to carry on with the deposits
-	hash, txResult := handler.ChainSimulator.ScCall(
+	hash, txResult := handler.ChainSimulator.SendTx(
 		ctx,
 		source.DrtSk,
 		receiver.DrtAddress,
 		zeroStringValue,
 		createDepositGasLimit,
-		dcdtTransferFunction,
-		[]string{
-			hex.EncodeToString([]byte(tkData.DrtUniversalToken)),
-			hex.EncodeToString(amount.Bytes())})
+	   []byte(
+        "DCDTTransfer@" +
+            hex.EncodeToString([]byte(tkData.DrtUniversalToken)) + "@" +
+            hex.EncodeToString(amount.Bytes()),
+    	),
+	)
 
 	log.Info("transfer to tx executed",
 		"source address", source.DrtAddress.Bech32(),
