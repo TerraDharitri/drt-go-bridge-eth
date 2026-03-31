@@ -1,0 +1,125 @@
+# github.com/TerraDharitri/drt-go-bridge-eth/integrationTests/relayers/slowTests.test
+/usr/bin/ld: warning: bint-x64-amd64.o: missing .note.GNU-stack section implies executable stack
+/usr/bin/ld: NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+=== RUN   TestRelayersShouldExecuteTransfersWithCoins
+[0;32mINFO [0m[2026-03-31 13:08:58.086]   #################################### starting setup #################################### 
+[0;32mINFO [0m[2026-03-31 13:08:58.091]   generated relayer                        [0;32mindex[0m = 0 [0;32mDrT address[0m = drt1pjslf35ndqc9cgh7ke0ksc5dlhgjcqhqcwfnwg6ugh25nu696uqqdytdl3 [0;32mEth address[0m = 0xF79E68EfaEb0d2D38270493c9f04f94081FC1030 [0;32mSui address[0m = 0x76da167b1a6f847c9de0a67d2df947c987726631472c8369cda3be6f7df3fb1d 
+[0;32mINFO [0m[2026-03-31 13:08:58.100]   generated relayer                        [0;32mindex[0m = 1 [0;32mDrT address[0m = drt1rw0zgy85d2nnxnj8zxmzgkda7kgwvy0ea27aps5up0xmhg6d55qqhlczls [0;32mEth address[0m = 0x04adD2648743CbdD40c221DF0ab1F63124345391 [0;32mSui address[0m = 0xd5468a8e8d62b71214cdddb2ad421eefa462a672e2d5d0f89e99d8bf78e55769 
+[0;32mINFO [0m[2026-03-31 13:08:58.102]   generated relayer                        [0;32mindex[0m = 2 [0;32mDrT address[0m = drt1zrr23pu28ccjksdwmtppxdw40uauc0sfschwnl5fqwjqar7yycqql0jure [0;32mEth address[0m = 0x9214a60a6B14Fbd80Ec77f2dbd03C3a295687e15 [0;32mSui address[0m = 0xa3ac5f5c43beefa45abc9353c70ab009c7276976bf832a3b79b8b4637cf9e4dc 
+[0;32mINFO [0m[2026-03-31 13:08:58.105]   generated oracle                         [0;32mindex[0m = 0 [0;32mDrT address[0m = drt1dusn8gxwxwmd3a6czpmafxjwxc27azzgx0umjyhdy3hwa3a3a5qqvmgtsr [0;32mEth address[0m = 0x8Eb579f1fc0653DAC323cd12fBf21DD65d8A75aa [0;32mSui address[0m = 0xfaec26b3bfdc1a1ef4f15f8583f39526b2a6b193b9aa7485e4ac9b98b8682ebc 
+[0;32mINFO [0m[2026-03-31 13:08:58.108]   generated oracle                         [0;32mindex[0m = 1 [0;32mDrT address[0m = drt1yapxmlkj5r5jvqg7wxnrz8tjdrwvwydrp9shpew6hswzph3zpuqq7e4egh [0;32mEth address[0m = 0xAd72CE6ddf505fa5358a64B2aEa3EfAD62d7E6F1 [0;32mSui address[0m = 0x86cef50be7e2d6423eb7f1d5787117fdf2f24278f736a01768a5e808e037720b 
+[0;32mINFO [0m[2026-03-31 13:08:58.116]   generated oracle                         [0;32mindex[0m = 2 [0;32mDrT address[0m = drt14lk36qcwpxvk6w0psknsnj309fs0kae40dhur7d9lynn66nk2sqqfumj3c [0;32mEth address[0m = 0xF5e29454833cCce357EA3fc63CFAec2B648b82F2 [0;32mSui address[0m = 0xca07fb929136edb342503264ee64ca947de01f4732785f1956c5f8bd38075ba4 
+[0;32mINFO [0m[2026-03-31 13:08:58.142]   generated owner                          [0;32mDrT address[0m = drt1cn9tqn5argseze7lrrl7cz63gyrx2per04vjw3rpq8wm4ph0cqqq754wta [0;32mEth address[0m = 0x71562b71999873DB5b286dF957af199Ec94617F7 [0;32mSui address[0m = 0x49af97dab31023e35271b579885c3b9391cee5b779ab572b9fdab1635c914999 
+[0;32mINFO [0m[2026-03-31 13:08:58.560]   Funded wallet: 0x76da167b1a6f847c9de0a67d2df947c987726631472c8369cda3be6f7df3fb1d 
+[0;32mINFO [0m[2026-03-31 13:08:58.994]   Funded wallet: 0xd5468a8e8d62b71214cdddb2ad421eefa462a672e2d5d0f89e99d8bf78e55769 
+[0;32mINFO [0m[2026-03-31 13:08:59.369]   Funded wallet: 0xa3ac5f5c43beefa45abc9353c70ab009c7276976bf832a3b79b8b4637cf9e4dc 
+[0;32mINFO [0m[2026-03-31 13:08:59.782]   Funded wallet: 0xfaec26b3bfdc1a1ef4f15f8583f39526b2a6b193b9aa7485e4ac9b98b8682ebc 
+[0;32mINFO [0m[2026-03-31 13:09:00.193]   Funded wallet: 0x86cef50be7e2d6423eb7f1d5787117fdf2f24278f736a01768a5e808e037720b 
+[0;32mINFO [0m[2026-03-31 13:09:00.602]   Funded wallet: 0xca07fb929136edb342503264ee64ca947de01f4732785f1956c5f8bd38075ba4 
+[0;32mINFO [0m[2026-03-31 13:09:01.054]   Funded wallet: 0x49af97dab31023e35271b579885c3b9391cee5b779ab572b9fdab1635c914999 
+[0;32mINFO [0m[2026-03-31 13:09:01.422]   Funded wallet: 0x8d54fb1a695d6f73356d8b24b28b63d7d13b09a7584dad4b94e8a8832176ea92 
+[0;32mINFO [0m[2026-03-31 13:09:01.834]   Funded wallet: 0xc39c531c4ebddd0008393367a9c6348c6207d8b2b09162c032a5d2bff9082d26 
+[0;32mINFO [0m[2026-03-31 13:09:03.475]   trying to probe the chain simulator      [0;32murl[0m = http://127.0.0.1:8085 [0;32mtry[0m = 0 
+[0;32mINFO [0m[2026-03-31 13:09:03.504]   probe ok, chain simulator instance found [0;32murl[0m = http://127.0.0.1:8085 
+[0;32mINFO [0m[2026-03-31 13:09:03.798]   Deploy: aggregator contract              [0;32maddress[0m = drt1qqqqqqqqqqqqqpgqds9d3lf5mt5az7lf0uuflc28stxselcqcqqqyd37z8 [0;32mtransaction hash[0m = be0be6fd09d3309190d5cf48d500aa09502bcf3960508ebccddcfeca25f65fa1 [0;32mnum oracles[0m = 3 
+[0;32mINFO [0m[2026-03-31 13:09:03.855]   Deploy: wrapper contract                 [0;32maddress[0m = drt1qqqqqqqqqqqqqpgq4vj3tyqlgdckthg82r6rpv8t2q2herw6cqqqvefd4w [0;32mtransaction hash[0m = ec5d59e0cb4a2a7674a729f9cba8316dc0994b35949313e8edeb0d9dc4170113 
+[0;32mINFO [0m[2026-03-31 13:09:03.918]   Deploy: multi-transfer contract          [0;32maddress[0m = drt1qqqqqqqqqqqqqpgqy570ft8dufh8lfhd3a6d9xkdexyn4wz7cqqqghkr4f [0;32mtransaction hash[0m = 2ae556624c960179f37c518b6b721b30c8b9c05db91f631707bbe1bdd60f30f5 
+[0;32mINFO [0m[2026-03-31 13:09:03.984]   Deploy: safe contract                    [0;32maddress[0m = drt1qqqqqqqqqqqqqpgq8ry9vfd7fs9gpxu8c9ke3tgc62jyeurpcqqq05wql0 [0;32mtransaction hash[0m = 7a8fb4340ffd1dab59477d2598e8c1e4a09068b85c774980018c06d859e9a62a 
+[0;32mINFO [0m[2026-03-31 13:09:04.041]   Deploy: SC proxy contract                [0;32maddress[0m = drt1qqqqqqqqqqqqqpgqazdzcwjt4a4zkr4ths5upcapfth9tmkacqqqp88gm2 [0;32mtransaction hash[0m = c7bc22557247333fc035e582922ecd9dd6b2a35f1194627be49c3c2175a6b7b5 
+[0;32mINFO [0m[2026-03-31 13:09:04.105]   Deploy: multisig contract                [0;32maddress[0m = drt1qqqqqqqqqqqqqpgqu4dv6cdhvgqjzucrlydx6v6448xpt2zscqqqgfe3rc [0;32mtransaction hash[0m = 5691f3f7ce429e32281ed489815207155b3ffee970b4627e76241a0079c34346 
+[0;32mINFO [0m[2026-03-31 13:09:04.160]   Deploy: test-caller contract             [0;32maddress[0m = drt1qqqqqqqqqqqqqpgqg5p40lqqkvjk5tsjk92a96xrnusglx4dcqqqjnmatd [0;32mtransaction hash[0m = fbc8ffa0d071d7a154616a8415b195c5952af8c7b4efff8040f392f8c29f83de 
+[0;32mINFO [0m[2026-03-31 13:09:04.211]   Set in multi-transfer contract the SC proxy contract [0;32mtransaction hash[0m = 9073608a1928879ace75e5f6bffa3dc7c820ea1bbe971f23fa9ed319744f3468 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.261]   Set in multi-transfer contract the wrapper contract [0;32mtransaction hash[0m = 923aea3dac7085cb083871f0b169edf15655e4fd27af52f14360e601c5c50f80 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.313]   Set in SC proxy contract the wrapper contract [0;32mtransaction hash[0m = 53f02469c4c10a43b95c7f77706a94dad37006772bcf9c606ea4ddfe031a18ff [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.361]   Set in SC proxy contract the multi-transfer contract [0;32mtransaction hash[0m = 4aa8cc57a9d1273597efc14a1211b37973021f7c56352299ba923d066f03ce98 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.411]   Set in SC proxy contract the safe contract [0;32mtransaction hash[0m = aaa54d2d20e8aaa50892251c727daff9afe309f7841fe475fc75ee77a9f85736 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.463]   Set in safe contract the wrapper contract [0;32mtransaction hash[0m = 74c3e1059711d1a92bf7716e4495e966fc21ae95439d6ece10a9e0ecdd4a9ec1 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.513]   Set in safe contract the SC proxy contract [0;32mtransaction hash[0m = 5636007635723befaa049467a36694bc0d064f7db01e668f021d990b704df762 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.567]   ChangeOwnerAddress for safe contract     [0;32mtransaction hash[0m = 4983401f0d0a9df4cdfb5c6d4c73e60b3cf31581ed46ce5c2f95f80668b26e52 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.616]   ChangeOwnerAddress for multi-transfer contract [0;32mtransaction hash[0m = 690a886891179fe24f52ab477e2f39b5df01521793a716bed92c72edeafd0499 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.665]   ChangeOwnerAddress for SC proxy contract [0;32mtransaction hash[0m = 71992d8f36d6aad40d3264e7b0dff2f8a7fc5c9d07cecbc5b77bf71b22cb77b5 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.714]   Un-paused SC proxy contract              [0;32mtransaction hash[0m = 4f4844d1b40e171e956a3c1e5e6a31c3a63d7a09bae4abe89f9469a6c9b4b060 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.764]   Set in multisig contract the safe contract (automatically) [0;32mtransaction hash[0m = 86723644a303019d81eebc5ad119392fceb547c851a6d95fe6e8e350fc8375e9 [0;32mstatus[0m = success 
+[0;32mINFO [0m[2026-03-31 13:09:04.815]   Address drt1pjslf35ndqc9cgh7ke0ksc5dlhgjcqhqcwfnwg6ugh25nu696uqqdytdl3 staked on contract drt1qqqqqqqqqqqqqpgqu4dv6cdhvgqjzucrlydx6v6448xpt2zscqqqgfe3rc with transaction hash 630bb017cb974cbafb01c960bd48bf11f8ea5aa07c7bf04ba50ca02c3fce32ec, status success 
+[0;32mINFO [0m[2026-03-31 13:09:04.866]   Address drt1rw0zgy85d2nnxnj8zxmzgkda7kgwvy0ea27aps5up0xmhg6d55qqhlczls staked on contract drt1qqqqqqqqqqqqqpgqu4dv6cdhvgqjzucrlydx6v6448xpt2zscqqqgfe3rc with transaction hash e5bb1ea70eeff5199b844a61cb7a19633acce6dc072e6bb87287db19d6817323, status success 
+[0;32mINFO [0m[2026-03-31 13:09:04.940]   Address drt1zrr23pu28ccjksdwmtppxdw40uauc0sfschwnl5fqwjqar7yycqql0jure staked on contract drt1qqqqqqqqqqqqqpgqu4dv6cdhvgqjzucrlydx6v6448xpt2zscqqqgfe3rc with transaction hash 11daa72ced3da503b8b900a7de129328190b5066142d401a7014e06f13824a28, status success 
+    chainSimulatorWrapper.go:166: 
+        	Error Trace:	/home/dharitri/Documents/WIP/New Repos/drt-go-bridge-eth/integrationTests/relayers/slowTests/framework/chainSimulatorWrapper.go:166
+        	            				/home/dharitri/Documents/WIP/New Repos/drt-go-bridge-eth/integrationTests/relayers/slowTests/framework/chainSimulatorWrapper.go:224
+        	            				/home/dharitri/Documents/WIP/New Repos/drt-go-bridge-eth/integrationTests/relayers/slowTests/framework/dharitriHandler.go:525
+        	            				/home/dharitri/Documents/WIP/New Repos/drt-go-bridge-eth/integrationTests/relayers/slowTests/framework/dharitriHandler.go:422
+        	            				/home/dharitri/Documents/WIP/New Repos/drt-go-bridge-eth/integrationTests/relayers/slowTests/framework/dharitriHandler.go:139
+        	            				/home/dharitri/Documents/WIP/New Repos/drt-go-bridge-eth/integrationTests/relayers/slowTests/framework/testSetup.go:86
+        	            				/home/dharitri/Documents/WIP/New Repos/drt-go-bridge-eth/integrationTests/relayers/slowTests/ethToDharitrIWithChainSimulator_test.go:257
+        	            				/home/dharitri/Documents/WIP/New Repos/drt-go-bridge-eth/integrationTests/relayers/slowTests/ethToDharitrIWithChainSimulator_test.go:209
+        	            				/home/dharitri/Documents/WIP/New Repos/drt-go-bridge-eth/integrationTests/relayers/slowTests/suiToDharitrIWithChainSimulator_test.go:24
+        	Error:      	Not equal: 
+        	            	expected: "success"
+        	            	actual  : "fail"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1,2 +1,2 @@
+        	            	-(transaction.TxStatus) (len=7) "success"
+        	            	+(transaction.TxStatus) (len=4) "fail"
+        	            	 
+        	Test:       	TestRelayersShouldExecuteTransfersWithCoins
+        	Messages:   	tx hash: 2fa57c6b870604e6c504e5134f682c164939105b7cb35e044f7cd875bb616c58,
+        	            	 tx: {
+        	            	  "type": "normal",
+        	            	  "processingTypeOnSource": "SCInvoking",
+        	            	  "processingTypeOnDestination": "SCInvoking",
+        	            	  "hash": "2fa57c6b870604e6c504e5134f682c164939105b7cb35e044f7cd875bb616c58",
+        	            	  "nonce": 0,
+        	            	  "value": "10000000000000000000",
+        	            	  "receiver": "drt1qqqqqqqqqqqqqpgqds9d3lf5mt5az7lf0uuflc28stxselcqcqqqyd37z8",
+        	            	  "sender": "drt1dusn8gxwxwmd3a6czpmafxjwxc27azzgx0umjyhdy3hwa3a3a5qqvmgtsr",
+        	            	  "gasPrice": 1000000000,
+        	            	  "gasLimit": 80000000,
+        	            	  "data": "c3Rha2U=",
+        	            	  "signature": "a57281e53cdbb2ef300eddcf7e73131a644df45fa7a7dd00f830e108804b31dbdc8900b38a1a13116358082cc0107a61647ae6fb809bd2651f4d8572c077500e",
+        	            	  "sourceShard": 0,
+        	            	  "destinationShard": 0,
+        	            	  "blockNonce": 358,
+        	            	  "blockHash": "7ffdaebc2502e278d3ab007a1eb3fcf5f8980975972f65ffa00b7fac98b4f611",
+        	            	  "miniblockType": "TxBlock",
+        	            	  "miniblockHash": "918205783f98491db1f696d4af3ac95f6ff4e83eb00c0c3e4809875e46aaff3e",
+        	            	  "timestamp": 1774943314,
+        	            	  "status": "success",
+        	            	  "hyperblockNonce": 0,
+        	            	  "hyperblockHash": "",
+        	            	  "logs": {
+        	            	    "address": "drt1qqqqqqqqqqqqqpgqds9d3lf5mt5az7lf0uuflc28stxselcqcqqqyd37z8",
+        	            	    "events": [
+        	            	      {
+        	            	        "address": "drt1qqqqqqqqqqqqqpgqds9d3lf5mt5az7lf0uuflc28stxselcqcqqqyd37z8",
+        	            	        "identifier": "signalError",
+        	            	        "topics": [
+        	            	          "byEzoM4zttj3WBB31JpONhXuiEgz+bkS7SRu7sex7QA=",
+        	            	          "SW52YWxpZCBwYXltZW50IHRva2Vu"
+        	            	        ],
+        	            	        "data": "QDc1NzM2NTcyMjA2NTcyNzI2Zjcy",
+        	            	        "additionalData": [
+        	            	          "QDc1NzM2NTcyMjA2NTcyNzI2Zjcy"
+        	            	        ]
+        	            	      },
+        	            	      {
+        	            	        "address": "drt1dusn8gxwxwmd3a6czpmafxjwxc27azzgx0umjyhdy3hwa3a3a5qqvmgtsr",
+        	            	        "identifier": "internalVMErrors",
+        	            	        "topics": [
+        	            	          "AAAAAAAAAAAFAGwK2P002unRe+l/OJ/hR4LNDP8AwAA=",
+        	            	          "c3Rha2U="
+        	            	        ],
+        	            	        "data": "CglydW50aW1lLmdvOjg0NCBbZXJyb3Igc2lnbmFsbGVkIGJ5IHNtYXJ0Y29udHJhY3RdIFtzdGFrZV0KCXJ1bnRpbWUuZ286ODQ0IFtlcnJvciBzaWduYWxsZWQgYnkgc21hcnRjb250cmFjdF0gW3N0YWtlXQoJcnVudGltZS5nbzo4NDEgW0ludmFsaWQgcGF5bWVudCB0b2tlbl0=",
+        	            	        "additionalData": [
+        	            	          "CglydW50aW1lLmdvOjg0NCBbZXJyb3Igc2lnbmFsbGVkIGJ5IHNtYXJ0Y29udHJhY3RdIFtzdGFrZV0KCXJ1bnRpbWUuZ286ODQ0IFtlcnJvciBzaWduYWxsZWQgYnkgc21hcnRjb250cmFjdF0gW3N0YWtlXQoJcnVudGltZS5nbzo4NDEgW0ludmFsaWQgcGF5bWVudCB0b2tlbl0="
+        	            	        ]
+        	            	      }
+        	            	    ]
+        	            	  }
+        	            	}
+--- FAIL: TestRelayersShouldExecuteTransfersWithCoins (6.91s)
+FAIL
+FAIL	github.com/TerraDharitri/drt-go-bridge-eth/integrationTests/relayers/slowTests	6.944s
+FAIL

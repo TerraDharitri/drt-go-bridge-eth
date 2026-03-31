@@ -2,6 +2,8 @@ module github.com/TerraDharitri/drt-go-bridge-eth
 
 go 1.23.0
 
+toolchain go1.23.6
+
 require (
 	github.com/TerraDharitri/drt-go-chain v0.0.0-20260317064220-836c2624b0ad
 	github.com/TerraDharitri/drt-go-chain-communication v1.0.1
