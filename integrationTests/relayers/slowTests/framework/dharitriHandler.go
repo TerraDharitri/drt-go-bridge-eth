@@ -910,7 +910,7 @@ func (handler *DharitriHandler) submitAggregatorBatchForKey(ctx context.Context,
 		ctx,
 		key.DrtSk,
 		handler.AggregatorAddress,
-		zeroStringValue,
+		minRelayerStake,
 		setCallsGasLimit,
 		submitBatchFunction,
 		[]string{
