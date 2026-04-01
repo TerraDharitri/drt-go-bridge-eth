@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-var notImplemented = errors.New("method not implemented")//nolint:staticcheck
+var errNotImplemented = errors.New("method not implemented")//nolint:staticcheck
 
 // CallDataMock -
 var CallDataMock = func() []byte {

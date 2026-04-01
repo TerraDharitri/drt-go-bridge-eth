@@ -90,7 +90,7 @@ func (stub *BridgeExecutorStub) GetBatchFromDharitrI(ctx context.Context) (*brid
 	if stub.GetBatchFromDharitrICalled != nil {
 		return stub.GetBatchFromDharitrICalled(ctx)
 	}
-	return nil, notImplemented
+	return nil, errNotImplemented
 }
 
 // StoreBatchFromDharitrI -
@@ -99,7 +99,7 @@ func (stub *BridgeExecutorStub) StoreBatchFromDharitrI(batch *bridgeCore.Transfe
 	if stub.StoreBatchFromDharitrICalled != nil {
 		return stub.StoreBatchFromDharitrICalled(batch)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // GetStoredBatch -
@@ -117,7 +117,7 @@ func (stub *BridgeExecutorStub) GetLastExecutedPeerBatchIDFromDharitrI(ctx conte
 	if stub.GetLastExecutedPeerBatchIDFromDharitrICalled != nil {
 		return stub.GetLastExecutedPeerBatchIDFromDharitrICalled(ctx)
 	}
-	return 0, notImplemented
+	return 0, errNotImplemented
 }
 
 // VerifyLastDepositNonceExecutedOnPeerBatch -
@@ -126,7 +126,7 @@ func (stub *BridgeExecutorStub) VerifyLastDepositNonceExecutedOnPeerBatch(ctx co
 	if stub.VerifyLastDepositNonceExecutedOnPeerBatchCalled != nil {
 		return stub.VerifyLastDepositNonceExecutedOnPeerBatchCalled(ctx)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // GetAndStoreActionIDForProposeTransferOnDharitrI -
@@ -135,7 +135,7 @@ func (stub *BridgeExecutorStub) GetAndStoreActionIDForProposeTransferOnDharitrI(
 	if stub.GetAndStoreActionIDForProposeTransferOnDharitrICalled != nil {
 		return stub.GetAndStoreActionIDForProposeTransferOnDharitrICalled(ctx)
 	}
-	return 0, notImplemented
+	return 0, errNotImplemented
 }
 
 // GetAndStoreActionIDForProposeSetStatusFromDharitrI -
@@ -144,7 +144,7 @@ func (stub *BridgeExecutorStub) GetAndStoreActionIDForProposeSetStatusFromDharit
 	if stub.GetAndStoreActionIDForProposeSetStatusFromDharitrICalled != nil {
 		return stub.GetAndStoreActionIDForProposeSetStatusFromDharitrICalled(ctx)
 	}
-	return 0, notImplemented
+	return 0, errNotImplemented
 }
 
 // GetStoredActionID -
@@ -162,7 +162,7 @@ func (stub *BridgeExecutorStub) WasTransferProposedOnDharitrI(ctx context.Contex
 	if stub.WasTransferProposedOnDharitrICalled != nil {
 		return stub.WasTransferProposedOnDharitrICalled(ctx)
 	}
-	return false, notImplemented
+	return false, errNotImplemented
 }
 
 // ProposeTransferOnDharitrI -
@@ -171,7 +171,7 @@ func (stub *BridgeExecutorStub) ProposeTransferOnDharitrI(ctx context.Context) e
 	if stub.ProposeTransferOnDharitrICalled != nil {
 		return stub.ProposeTransferOnDharitrICalled(ctx)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // ProcessMaxRetriesOnWasTransferProposedOnDharitrI -
@@ -197,7 +197,7 @@ func (stub *BridgeExecutorStub) WasSetStatusProposedOnDharitrI(ctx context.Conte
 	if stub.WasSetStatusProposedOnDharitrICalled != nil {
 		return stub.WasSetStatusProposedOnDharitrICalled(ctx)
 	}
-	return false, notImplemented
+	return false, errNotImplemented
 }
 
 // ProposeSetStatusOnDharitrI -
@@ -206,7 +206,7 @@ func (stub *BridgeExecutorStub) ProposeSetStatusOnDharitrI(ctx context.Context) 
 	if stub.ProposeSetStatusOnDharitrICalled != nil {
 		return stub.ProposeSetStatusOnDharitrICalled(ctx)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // WasActionSignedOnDharitrI -
@@ -215,7 +215,7 @@ func (stub *BridgeExecutorStub) WasActionSignedOnDharitrI(ctx context.Context) (
 	if stub.WasActionSignedOnDharitrICalled != nil {
 		return stub.WasActionSignedOnDharitrICalled(ctx)
 	}
-	return false, notImplemented
+	return false, errNotImplemented
 }
 
 // SignActionOnDharitrI -
@@ -224,7 +224,7 @@ func (stub *BridgeExecutorStub) SignActionOnDharitrI(ctx context.Context) error 
 	if stub.SignActionOnDharitrICalled != nil {
 		return stub.SignActionOnDharitrICalled(ctx)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // ProcessQuorumReachedOnDharitrI -
@@ -233,7 +233,7 @@ func (stub *BridgeExecutorStub) ProcessQuorumReachedOnDharitrI(ctx context.Conte
 	if stub.ProcessQuorumReachedOnDharitrICalled != nil {
 		return stub.ProcessQuorumReachedOnDharitrICalled(ctx)
 	}
-	return false, notImplemented
+	return false, errNotImplemented
 }
 
 // WasActionPerformedOnDharitrI -
@@ -242,7 +242,7 @@ func (stub *BridgeExecutorStub) WasActionPerformedOnDharitrI(ctx context.Context
 	if stub.WasActionPerformedOnDharitrICalled != nil {
 		return stub.WasActionPerformedOnDharitrICalled(ctx)
 	}
-	return false, notImplemented
+	return false, errNotImplemented
 }
 
 // PerformActionOnDharitrI -
@@ -251,7 +251,7 @@ func (stub *BridgeExecutorStub) PerformActionOnDharitrI(ctx context.Context) err
 	if stub.PerformActionOnDharitrICalled != nil {
 		return stub.PerformActionOnDharitrICalled(ctx)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // ResolveNewDepositsStatuses -
@@ -285,7 +285,7 @@ func (stub *BridgeExecutorStub) GetAndStoreBatchFromPeerChain(ctx context.Contex
 	if stub.GetAndStoreBatchFromPeerChainCalled != nil {
 		return stub.GetAndStoreBatchFromPeerChainCalled(ctx, nonce)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // WasTransferPerformedOnPeerChain -
@@ -294,7 +294,7 @@ func (stub *BridgeExecutorStub) WasTransferPerformedOnPeerChain(ctx context.Cont
 	if stub.WasTransferPerformedOnPeerChainCalled != nil {
 		return stub.WasTransferPerformedOnPeerChainCalled(ctx)
 	}
-	return false, notImplemented
+	return false, errNotImplemented
 }
 
 // SignTransferOnPeerChain -
@@ -303,7 +303,7 @@ func (stub *BridgeExecutorStub) SignTransferOnPeerChain() error {
 	if stub.SignTransferOnPeerChainCalled != nil {
 		return stub.SignTransferOnPeerChainCalled()
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // PerformTransferOnPeerChain -
@@ -312,7 +312,7 @@ func (stub *BridgeExecutorStub) PerformTransferOnPeerChain(ctx context.Context) 
 	if stub.PerformTransferOnPeerChainCalled != nil {
 		return stub.PerformTransferOnPeerChainCalled(ctx)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // ProcessQuorumReachedOnPeerChain -
@@ -321,7 +321,7 @@ func (stub *BridgeExecutorStub) ProcessQuorumReachedOnPeerChain(ctx context.Cont
 	if stub.ProcessQuorumReachedOnPeerChainCalled != nil {
 		return stub.ProcessQuorumReachedOnPeerChainCalled(ctx)
 	}
-	return false, notImplemented
+	return false, errNotImplemented
 }
 
 // WaitForTransferConfirmation -
@@ -347,7 +347,7 @@ func (stub *BridgeExecutorStub) GetBatchStatusesFromPeerChain(ctx context.Contex
 	if stub.GetBatchStatusesFromPeerChainCalled != nil {
 		return stub.GetBatchStatusesFromPeerChainCalled(ctx)
 	}
-	return nil, notImplemented
+	return nil, errNotImplemented
 }
 
 // ProcessMaxQuorumRetriesOnPeerChain -
@@ -380,7 +380,7 @@ func (stub *BridgeExecutorStub) CheckDharitrIClientAvailability(ctx context.Cont
 	if stub.CheckDharitrIClientAvailabilityCalled != nil {
 		return stub.CheckDharitrIClientAvailabilityCalled(ctx)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // CheckPeerClientAvailability -
@@ -388,7 +388,7 @@ func (stub *BridgeExecutorStub) CheckPeerClientAvailability(ctx context.Context)
 	if stub.CheckPeerClientAvailabilityCalled != nil {
 		return stub.CheckPeerClientAvailabilityCalled(ctx)
 	}
-	return notImplemented
+	return errNotImplemented
 }
 
 // IsInterfaceNil -

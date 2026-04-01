@@ -2,13 +2,10 @@ package bridge
 
 import (
 	"context"
-	"errors"
 	"math/big"
 
 	bridgeCore "github.com/TerraDharitri/drt-go-bridge-eth/core"
 )
-
-var errNotImplemented = errors.New("not implemented")
 
 // DharitrIClientStub -
 type DharitrIClientStub struct {
@@ -218,7 +215,7 @@ func (stub *DharitrIClientStub) IsMintBurnToken(ctx context.Context, token []byt
 	if stub.IsMintBurnTokenCalled != nil {
 		return stub.IsMintBurnTokenCalled(ctx, token)
 	}
-	return false, notImplemented
+	return false, errNotImplemented
 }
 
 // IsNativeToken -
@@ -226,7 +223,7 @@ func (stub *DharitrIClientStub) IsNativeToken(ctx context.Context, token []byte)
 	if stub.IsNativeTokenCalled != nil {
 		return stub.IsNativeTokenCalled(ctx, token)
 	}
-	return false, notImplemented
+	return false, errNotImplemented
 }
 
 // TotalBalances -
@@ -234,7 +231,7 @@ func (stub *DharitrIClientStub) TotalBalances(ctx context.Context, token []byte)
 	if stub.TotalBalancesCalled != nil {
 		return stub.TotalBalancesCalled(ctx, token)
 	}
-	return nil, notImplemented
+	return nil, errNotImplemented
 }
 
 // MintBalances -
@@ -242,7 +239,7 @@ func (stub *DharitrIClientStub) MintBalances(ctx context.Context, token []byte) 
 	if stub.MintBalancesCalled != nil {
 		return stub.MintBalancesCalled(ctx, token)
 	}
-	return nil, notImplemented
+	return nil, errNotImplemented
 }
 
 // BurnBalances -
@@ -250,7 +247,7 @@ func (stub *DharitrIClientStub) BurnBalances(ctx context.Context, token []byte) 
 	if stub.BurnBalancesCalled != nil {
 		return stub.BurnBalancesCalled(ctx, token)
 	}
-	return nil, notImplemented
+	return nil, errNotImplemented
 }
 
 // CheckRequiredBalance -

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"go/token"
 	"math/big"
 	"strings"
 	"testing"
@@ -140,12 +139,11 @@ func (handler *DharitriHandler) DeployAndSetContracts(ctx context.Context, chain
 	handler.finishSettings(ctx)
 }
 
-func (handler *DharitriHandler) deployContracts(ctx context.Context, chainType ChainType,  tokenIdentifier string) {
-	tkData := handler.TokensRegistry.GetTokenData(tokenIdentifier)
+func (handler *DharitriHandler) deployContracts(ctx context.Context, chainType ChainType) {
 	// deploy aggregator
 	stakeValue, _ := big.NewInt(0).SetString(minRelayerStake, 10)
 	aggregatorDeployParams := []string{
-		hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)), // native REWA token identifier as used by the VM
+		hex.EncodeToString([]byte("REWA")),
 		hex.EncodeToString(stakeValue.Bytes()),
 		"01",
 		"02",
@@ -802,21 +800,20 @@ func (handler *DharitriHandler) setInitialSupply(ctx context.Context, params Iss
 			log.Info("initial supply tx executed", "hash", hash, "status", txResult.Status,
 				"initial mint", params.InitialSupplyValue, "initial burned", "0")
 		} else {
-				data := "DCDTTransfer@" +
-					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)) + "@" +
-					hex.EncodeToString(initialSupply.Bytes()) + "@" +
-					hex.EncodeToString([]byte(initSupplyDcdtSafe)) + "@" +
-					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)) + "@" +
-					hex.EncodeToString(initialSupply.Bytes())
-
-				hash, txResult := handler.ChainSimulator.SendTx(
-					ctx,
-					handler.OwnerKeys.DrtSk,
-					handler.MultisigAddress,
-					zeroStringValue,
-					setCallsGasLimit,
-					[]byte(data),
-				)
+							hash, txResult := handler.ChainSimulator.ScCall(
+				ctx,
+				handler.OwnerKeys.DrtSk,
+				handler.MultisigAddress,
+				zeroStringValue,
+				setCallsGasLimit,
+				dcdtTransferFunction,
+				[]string{
+					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+					hex.EncodeToString(initialSupply.Bytes()),
+					hex.EncodeToString([]byte(initSupplyDcdtSafe)),
+					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+					hex.EncodeToString(initialSupply.Bytes()),
+				})
 
 			log.Info("initial supply tx executed", "hash", hash, "status", txResult.Status,
 				"initial value", params.InitialSupplyValue)
