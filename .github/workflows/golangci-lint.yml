@@ -2,9 +2,9 @@ name: golangci-lint
 
 on:
   push:
-    branches: [ main, feat/*, dev ]
+    branches: [ main, feat/*, dev-m ]
   pull_request:
-      branches: [ main, feat/*, dev ]
+      branches: [ main, feat/*, dev-m ]
 
 jobs:
   golangci:
