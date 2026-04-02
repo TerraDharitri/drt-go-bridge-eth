@@ -2,8 +2,9 @@ name: Create release
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main, feat/*, dev ]
+  pull_request:
+      branches: [ main, feat/*, dev ]
 
 permissions:
   contents: write
