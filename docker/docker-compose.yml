@@ -1,6 +1,6 @@
 services:
  chain-simulator:
-  image: terradharitri/chainsimulator:dev
+  image: terradharitri/chainsimulator:9011e0d
   ports:
     - 8085:8085
   volumes:
