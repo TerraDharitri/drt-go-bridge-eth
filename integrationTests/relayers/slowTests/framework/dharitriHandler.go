@@ -1,0 +1,1074 @@
+package framework
+
+import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"math/big"
+	"strings"
+	"testing"
+
+	"github.com/TerraDharitri/drt-go-bridge-eth/clients/sui"
+	"github.com/TerraDharitri/drt-go-sdk/data"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	minRelayerStake          = "10000000000000000000" // 10 REWA
+	dcdtIssueCost            = "50000000000000000"    // 0.05 REWA
+	emptyAddress             = "drt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq85hk5z"
+	dcdtSystemSCAddress      = "drt1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzllls6prdez"
+	slashAmount              = "00"
+	zeroStringValue          = "0"
+	canAddSpecialRoles       = "canAddSpecialRoles"
+	trueStr                  = "true"
+	dcdtRoleLocalMint        = "DCDTRoleLocalMint"
+	dcdtRoleLocalBurn        = "DCDTRoleLocalBurn"
+	hexTrue                  = "01"
+	hexFalse                 = "00"
+	gwei                     = "GWEI"
+	maxBridgedAmountForToken = "500000"
+	deployGasLimit           = 150000000 // 150 million
+	setCallsGasLimit         = 80000000  // 80 million
+	issueTokenGasLimit       = 70000000  // 70 million
+	createDepositGasLimit    = 20000000  // 20 million
+	generalSCCallGasLimit    = 50000000  // 50 million
+	gasLimitPerDataByte      = 1500
+
+	wrapperContractPathTemplate       = "testdata/contracts/drt/%s-version/bridged-tokens-wrapper.wasm"
+	multiTransferContractPathTemplate = "testdata/contracts/drt/%s-version/multi-transfer-dcdt.wasm"
+	safeContractPathTemplate          = "testdata/contracts/drt/%s-version/dcdt-safe.wasm"
+	multisigContractPathTemplate      = "testdata/contracts/drt/%s-version/multisig.wasm"
+	bridgeProxyContractPathTemplate   = "testdata/contracts/drt/%s-version/bridge-proxy.wasm"
+	aggregatorContractPath            = "testdata/contracts/drt/dharitri-price-aggregator-sc.wasm"
+	testCallerContractPath            = "testdata/contracts/drt/test-caller.wasm"
+
+	setBridgeProxyContractAddressFunction                = "setBridgeProxyContractAddress"
+	setWrappingContractAddressFunction                   = "setWrappingContractAddress"
+	changeOwnerAddressFunction                           = "ChangeOwnerAddress"
+	setDcdtSafeOnMultiTransferFunction                   = "setDcdtSafeOnMultiTransfer"
+	setDcdtSafeAddressFunction                           = "setDcdtSafeAddress"
+	stakeFunction                                        = "stake"
+	unpauseFunction                                      = "unpause"
+	unpauseDcdtSafeFunction                              = "unpauseDcdtSafe"
+	unpauseProxyFunction                                 = "unpauseProxy"
+	pauseDcdtSafeFunction                                = "pauseDcdtSafe"
+	pauseFunction                                        = "pause"
+	issueFunction                                        = "issue"
+	setSpecialRoleFunction                               = "setSpecialRole"
+	dcdtTransferFunction                                 = "DCDTTransfer"
+	setPairDecimalsFunction                              = "setPairDecimals"
+	addWrappedTokenFunction                              = "addWrappedToken"
+	depositLiquidityFunction                             = "depositLiquidity"
+	whitelistTokenFunction                               = "whitelistToken"
+	addMappingFunction                                   = "addMapping"
+	dcdtSafeAddTokenToWhitelistFunction                  = "dcdtSafeAddTokenToWhitelist"
+	dcdtSafeSetMaxBridgedAmountForTokenFunction          = "dcdtSafeSetMaxBridgedAmountForToken"
+	multiTransferDcdtSetMaxBridgedAmountForTokenFunction = "multiTransferDcdtSetMaxBridgedAmountForToken"
+	submitBatchFunction                                  = "submitBatch"
+	unwrapTokenCreateTransactionFunction                 = "unwrapTokenCreateTransaction"
+	createTransactionFunction                            = "createTransaction"
+	setBridgedTokensWrapperAddressFunction               = "setBridgedTokensWrapperAddress"
+	setMultiTransferAddressFunction                      = "setMultiTransferAddress"
+	withdrawRefundFeesForEthereumFunction                = "withdrawRefundFeesForEthereum"
+	getRefundFeesForEthereumFunction                     = "getRefundFeesForEthereum"
+	withdrawTransactionFeesFunction                      = "withdrawTransactionFees"
+	getTransactionFeesFunction                           = "getTransactionFees"
+	initSupplyMintBurnDcdtSafe                           = "initSupplyMintBurnDcdtSafe"
+	initSupplyDcdtSafe                                   = "initSupplyDcdtSafe"
+)
+
+var (
+	feeInt = big.NewInt(50)
+)
+
+// DharitriHandler will handle all the operations on the DharitrI side
+type DharitriHandler struct {
+	testing.TB
+	*KeysStore
+	Quorum         string
+	TokensRegistry TokensRegistry
+	ChainSimulator ChainSimulatorWrapper
+
+	AggregatorAddress         *DrtAddress
+	WrapperAddress            *DrtAddress
+	SafeAddress               *DrtAddress
+	MultisigAddress           *DrtAddress
+	MultiTransferAddress      *DrtAddress
+	ScProxyAddress            *DrtAddress
+	TestCallerAddress         *DrtAddress
+	DCDTSystemContractAddress *DrtAddress
+}
+
+// NewDharitriHandler will create the handler that will adapt all test operations on DharitrI
+func NewDharitriHandler(
+	tb testing.TB,
+	ctx context.Context,
+	keysStore *KeysStore,
+	tokensRegistry TokensRegistry,
+	chainSimulator ChainSimulatorWrapper,
+	quorum string,
+) *DharitriHandler {
+	handler := &DharitriHandler{
+		TB:             tb,
+		KeysStore:      keysStore,
+		TokensRegistry: tokensRegistry,
+		ChainSimulator: chainSimulator,
+		Quorum:         quorum,
+	}
+
+	handler.DCDTSystemContractAddress = NewDrtAddressFromBech32(handler, dcdtSystemSCAddress)
+
+	handler.ChainSimulator.GenerateBlocksUntilEpochReached(ctx, 1)
+
+	handler.ChainSimulator.FundWallets(ctx, handler.WalletsToFundOnDharitrI())
+	handler.ChainSimulator.GenerateBlocks(ctx, 1)
+
+	return handler
+}
+
+// DeployAndSetContracts will deploy all required contracts on DharitrI side and do the proper wiring
+func (handler *DharitriHandler) DeployAndSetContracts(ctx context.Context, chainType ChainType) {
+	handler.deployContracts(ctx, chainType)
+
+	handler.wireMultiTransfer(ctx)
+	handler.wireSCProxy(ctx)
+	handler.wireSafe(ctx)
+
+	handler.changeOwners(ctx)
+	handler.finishSettings(ctx)
+}
+
+func (handler *DharitriHandler) deployContracts(ctx context.Context, chainType ChainType) {
+	// deploy aggregator
+	stakeValue, _ := big.NewInt(0).SetString(minRelayerStake, 10)
+	aggregatorDeployParams := []string{
+		hex.EncodeToString([]byte("REWA")),
+		hex.EncodeToString(stakeValue.Bytes()),
+		"01",
+		"02",
+		"03",
+	}
+
+	for _, oracleKey := range handler.OraclesKeys {
+		aggregatorDeployParams = append(aggregatorDeployParams, oracleKey.DrtAddress.Hex())
+	}
+
+	hash := ""
+	handler.AggregatorAddress, hash, _ = handler.ChainSimulator.DeploySC(
+		ctx,
+		aggregatorContractPath,
+		handler.OwnerKeys.DrtSk,
+		deployGasLimit,
+		aggregatorDeployParams,
+	)
+	require.NotEqual(handler, emptyAddress, handler.AggregatorAddress)
+	log.Info("Deploy: aggregator contract", "address", handler.AggregatorAddress, "transaction hash", hash, "num oracles", len(handler.OraclesKeys))
+
+	// deploy wrapper
+	handler.WrapperAddress, hash, _ = handler.ChainSimulator.DeploySC(
+		ctx,
+		fmt.Sprintf(wrapperContractPathTemplate, chainType),
+		handler.OwnerKeys.DrtSk,
+		deployGasLimit,
+		[]string{},
+	)
+	require.NotEqual(handler, emptyAddress, handler.WrapperAddress)
+	log.Info("Deploy: wrapper contract", "address", handler.WrapperAddress, "transaction hash", hash)
+
+	// deploy multi-transfer
+	handler.MultiTransferAddress, hash, _ = handler.ChainSimulator.DeploySC(
+		ctx,
+		fmt.Sprintf(multiTransferContractPathTemplate, chainType),
+		handler.OwnerKeys.DrtSk,
+		deployGasLimit,
+		[]string{},
+	)
+	require.NotEqual(handler, emptyAddress, handler.MultiTransferAddress)
+	log.Info("Deploy: multi-transfer contract", "address", handler.MultiTransferAddress, "transaction hash", hash)
+
+	// deploy safe
+	handler.SafeAddress, hash, _ = handler.ChainSimulator.DeploySC(
+		ctx,
+		fmt.Sprintf(safeContractPathTemplate, chainType),
+		handler.OwnerKeys.DrtSk,
+		deployGasLimit,
+		[]string{
+			handler.AggregatorAddress.Hex(),
+			handler.MultiTransferAddress.Hex(),
+			"01",
+		},
+	)
+	require.NotEqual(handler, emptyAddress, handler.SafeAddress)
+	log.Info("Deploy: safe contract", "address", handler.SafeAddress, "transaction hash", hash)
+
+	// deploy bridge proxy
+	handler.ScProxyAddress, hash, _ = handler.ChainSimulator.DeploySC(
+		ctx,
+		fmt.Sprintf(bridgeProxyContractPathTemplate, chainType),
+		handler.OwnerKeys.DrtSk,
+		deployGasLimit,
+		[]string{
+			handler.MultiTransferAddress.Hex(),
+		},
+	)
+	require.NotEqual(handler, emptyAddress, handler.ScProxyAddress)
+	log.Info("Deploy: SC proxy contract", "address", handler.ScProxyAddress, "transaction hash", hash)
+
+	// deploy multisig
+	minRelayerStakeInt, _ := big.NewInt(0).SetString(minRelayerStake, 10)
+	minRelayerStakeHex := hex.EncodeToString(minRelayerStakeInt.Bytes())
+	params := []string{
+		handler.SafeAddress.Hex(),
+		handler.MultiTransferAddress.Hex(),
+		handler.ScProxyAddress.Hex(),
+		minRelayerStakeHex,
+		slashAmount,
+		handler.Quorum}
+	for _, relayerKeys := range handler.RelayersKeys {
+		params = append(params, relayerKeys.DrtAddress.Hex())
+	}
+	handler.MultisigAddress, hash, _ = handler.ChainSimulator.DeploySC(
+		ctx,
+		fmt.Sprintf(multisigContractPathTemplate, chainType),
+		handler.OwnerKeys.DrtSk,
+		deployGasLimit,
+		params,
+	)
+	require.NotEqual(handler, emptyAddress, handler.MultisigAddress)
+	log.Info("Deploy: multisig contract", "address", handler.MultisigAddress, "transaction hash", hash)
+
+	// deploy test-caller
+	handler.TestCallerAddress, hash, _ = handler.ChainSimulator.DeploySC(
+		ctx,
+		testCallerContractPath,
+		handler.OwnerKeys.DrtSk,
+		deployGasLimit,
+		[]string{},
+	)
+	require.NotEqual(handler, emptyAddress, handler.TestCallerAddress)
+	log.Info("Deploy: test-caller contract", "address", handler.TestCallerAddress, "transaction hash", hash)
+}
+
+func (handler *DharitriHandler) wireMultiTransfer(ctx context.Context) {
+	// setBridgeProxyContractAddress
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.MultiTransferAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setBridgeProxyContractAddressFunction,
+		[]string{
+			handler.ScProxyAddress.Hex(),
+		},
+	)
+	log.Info("Set in multi-transfer contract the SC proxy contract", "transaction hash", hash, "status", txResult.Status)
+
+	// setWrappingContractAddress
+	hash, txResult = handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.MultiTransferAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setWrappingContractAddressFunction,
+		[]string{
+			handler.WrapperAddress.Hex(),
+		},
+	)
+	log.Info("Set in multi-transfer contract the wrapper contract", "transaction hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) wireSCProxy(ctx context.Context) {
+	// setBridgedTokensWrapper in SC bridge proxy
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.ScProxyAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setBridgedTokensWrapperAddressFunction,
+		[]string{
+			handler.WrapperAddress.Hex(),
+		},
+	)
+	log.Info("Set in SC proxy contract the wrapper contract", "transaction hash", hash, "status", txResult.Status)
+
+	// setMultiTransferAddress in SC bridge proxy
+	hash, txResult = handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.ScProxyAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setMultiTransferAddressFunction,
+		[]string{
+			handler.MultiTransferAddress.Hex(),
+		},
+	)
+	log.Info("Set in SC proxy contract the multi-transfer contract", "transaction hash", hash, "status", txResult.Status)
+
+	// setDcdtSafeAddress on bridge proxy
+	hash, txResult = handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.ScProxyAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setDcdtSafeAddressFunction,
+		[]string{
+			handler.SafeAddress.Hex(),
+		},
+	)
+	log.Info("Set in SC proxy contract the safe contract", "transaction hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) wireSafe(ctx context.Context) {
+	// setBridgedTokensWrapperAddress
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.SafeAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setBridgedTokensWrapperAddressFunction,
+		[]string{
+			handler.WrapperAddress.Hex(),
+		},
+	)
+	log.Info("Set in safe contract the wrapper contract", "transaction hash", hash, "status", txResult.Status)
+
+	//setBridgeProxyContractAddress
+	hash, txResult = handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.SafeAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setBridgeProxyContractAddressFunction,
+		[]string{
+			handler.ScProxyAddress.Hex(),
+		},
+	)
+	log.Info("Set in safe contract the SC proxy contract", "transaction hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) changeOwners(ctx context.Context) {
+	// ChangeOwnerAddress for safe
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.SafeAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		changeOwnerAddressFunction,
+		[]string{
+			handler.MultisigAddress.Hex(),
+		},
+	)
+	log.Info("ChangeOwnerAddress for safe contract", "transaction hash", hash, "status", txResult.Status)
+
+	// ChangeOwnerAddress for multi-transfer
+	hash, txResult = handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.MultiTransferAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		changeOwnerAddressFunction,
+		[]string{
+			handler.MultisigAddress.Hex(),
+		},
+	)
+	log.Info("ChangeOwnerAddress for multi-transfer contract", "transaction hash", hash, "status", txResult.Status)
+
+	// ChangeOwnerAddress for bridge proxy
+	hash, txResult = handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.ScProxyAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		changeOwnerAddressFunction,
+		[]string{
+			handler.MultisigAddress.Hex(),
+		},
+	)
+	log.Info("ChangeOwnerAddress for SC proxy contract", "transaction hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) finishSettings(ctx context.Context) {
+	// unpause sc proxy
+	hash, txResult := handler.callContractNoParams(ctx, handler.MultisigAddress, unpauseProxyFunction)
+	log.Info("Un-paused SC proxy contract", "transaction hash", hash, "status", txResult.Status)
+
+	// setDcdtSafeOnMultiTransfer
+	hash, txResult = handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.MultisigAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setDcdtSafeOnMultiTransferFunction,
+		[]string{},
+	)
+	log.Info("Set in multisig contract the safe contract (automatically)", "transaction hash", hash, "status", txResult.Status)
+
+	// stake relayers on multisig
+	handler.stakeAddressesOnContract(ctx, handler.MultisigAddress, handler.RelayersKeys)
+
+	// stake relayers on price aggregator
+	handler.stakeAddressesOnContract(ctx, handler.AggregatorAddress, handler.OraclesKeys)
+
+	// unpause multisig
+	hash, txResult = handler.callContractNoParams(ctx, handler.MultisigAddress, unpauseFunction)
+	log.Info("Un-paused multisig contract", "transaction hash", hash, "status", txResult.Status)
+
+	handler.UnPauseContractsAfterTokenChanges(ctx)
+}
+
+// CheckForZeroBalanceOnReceivers will check that the balances for all provided tokens are 0 for the test address and the test SC call address
+func (handler *DharitriHandler) CheckForZeroBalanceOnReceivers(ctx context.Context, tokens ...TestTokenParams) {
+	for _, params := range tokens {
+		handler.CheckForZeroBalanceOnReceiversForToken(ctx, params)
+	}
+}
+
+// CheckForZeroBalanceOnReceiversForToken will check that the balance for the test address and the test SC call address is 0
+func (handler *DharitriHandler) CheckForZeroBalanceOnReceiversForToken(ctx context.Context, token TestTokenParams) {
+	balance := handler.GetDCDTUniversalTokenBalance(ctx, handler.TestKeys.DrtAddress, token.AbstractTokenIdentifier)
+	require.Equal(handler, big.NewInt(0).String(), balance.String())
+
+	balance = handler.GetDCDTUniversalTokenBalance(ctx, handler.TestCallerAddress, token.AbstractTokenIdentifier)
+	require.Equal(handler, big.NewInt(0).String(), balance.String())
+}
+
+// GetDCDTUniversalTokenBalance will return the universal DCDT token's balance
+func (handler *DharitriHandler) GetDCDTUniversalTokenBalance(
+	ctx context.Context,
+	address *DrtAddress,
+	abstractTokenIdentifier string,
+) *big.Int {
+	token := handler.TokensRegistry.GetTokenData(abstractTokenIdentifier)
+	require.NotNil(handler, token)
+
+	balanceString := handler.ChainSimulator.GetDCDTBalance(ctx, address, token.DrtUniversalToken)
+
+	balance, ok := big.NewInt(0).SetString(balanceString, 10)
+	require.True(handler, ok)
+
+	return balance
+}
+
+// GetDCDTChainSpecificTokenBalance will return the chain specific DCDT token's balance
+func (handler *DharitriHandler) GetDCDTChainSpecificTokenBalance(
+	ctx context.Context,
+	address *DrtAddress,
+	abstractTokenIdentifier string,
+) *big.Int {
+	token := handler.TokensRegistry.GetTokenData(abstractTokenIdentifier)
+	require.NotNil(handler, token)
+
+	balanceString := handler.ChainSimulator.GetDCDTBalance(ctx, address, token.DrtChainSpecificToken)
+
+	balance, ok := big.NewInt(0).SetString(balanceString, 10)
+	require.True(handler, ok)
+
+	return balance
+}
+
+func (handler *DharitriHandler) callContractNoParams(ctx context.Context, contract *DrtAddress, endpoint string) (string, *data.TransactionOnNetwork) {
+	return handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		contract,
+		zeroStringValue,
+		setCallsGasLimit,
+		endpoint,
+		[]string{},
+	)
+}
+
+// UnPauseContractsAfterTokenChanges can unpause contracts after token changes
+func (handler *DharitriHandler) UnPauseContractsAfterTokenChanges(ctx context.Context) {
+	// unpause safe
+	hash, txResult := handler.callContractNoParams(ctx, handler.MultisigAddress, unpauseDcdtSafeFunction)
+	log.Info("unpaused safe executed", "hash", hash, "status", txResult.Status)
+
+	// unpause wrapper
+	hash, txResult = handler.callContractNoParams(ctx, handler.WrapperAddress, unpauseFunction)
+	log.Info("unpaused wrapper executed", "hash", hash, "status", txResult.Status)
+
+	// unpause aggregator
+	hash, txResult = handler.callContractNoParams(ctx, handler.AggregatorAddress, unpauseFunction)
+	log.Info("unpaused aggregator executed", "hash", hash, "status", txResult.Status)
+}
+
+// PauseContractsForTokenChanges can pause contracts for token changes
+func (handler *DharitriHandler) PauseContractsForTokenChanges(ctx context.Context) {
+	// pause safe
+	hash, txResult := handler.callContractNoParams(ctx, handler.MultisigAddress, pauseDcdtSafeFunction)
+	log.Info("paused safe executed", "hash", hash, "status", txResult.Status)
+
+	// pause aggregator
+	hash, txResult = handler.callContractNoParams(ctx, handler.AggregatorAddress, pauseFunction)
+	log.Info("paused aggregator executed", "hash", hash, "status", txResult.Status)
+
+	// pause wrapper
+	hash, txResult = handler.callContractNoParams(ctx, handler.WrapperAddress, pauseFunction)
+	log.Info("paused wrapper executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) stakeAddressesOnContract(ctx context.Context, contract *DrtAddress, allKeys []KeysHolder) {
+	for _, keys := range allKeys {
+		hash, txResult := handler.ChainSimulator.SendTx(
+			ctx,
+			keys.DrtSk,
+			contract,
+			minRelayerStake,
+			setCallsGasLimit,
+			[]byte(stakeFunction),
+		)
+		log.Info(fmt.Sprintf("Address %s staked on contract %s with transaction hash %s, status %s", keys.DrtAddress, contract, hash, txResult.Status))
+	}
+}
+
+// IssueAndWhitelistToken will issue and whitelist the token on DharitrI
+func (handler *DharitriHandler) IssueAndWhitelistToken(ctx context.Context, params IssueTokenParams) {
+	if params.HasChainSpecificToken {
+		handler.issueAndWhitelistTokensWithChainSpecific(ctx, params)
+	} else {
+		handler.issueAndWhitelistTokens(ctx, params)
+	}
+}
+
+func (handler *DharitriHandler) issueAndWhitelistTokensWithChainSpecific(ctx context.Context, params IssueTokenParams) {
+	handler.issueUniversalToken(ctx, params)
+	handler.issueChainSpecificToken(ctx, params)
+	handler.setLocalRolesForUniversalTokenOnWrapper(ctx, params)
+	handler.transferChainSpecificTokenToSCs(ctx, params)
+	handler.addUniversalTokenToWrapper(ctx, params)
+	handler.whitelistTokenOnWrapper(ctx, params)
+	handler.setRolesForSpecificTokenOnSafe(ctx, params)
+	handler.addMappingInMultisig(ctx, params)
+	handler.whitelistTokenOnMultisig(ctx, params)
+	handler.setInitialSupply(ctx, params)
+	handler.setPairDecimalsOnAggregator(ctx, params)
+	handler.setMaxBridgeAmountOnSafe(ctx, params)
+	handler.setMaxBridgeAmountOnMultitransfer(ctx, params)
+}
+
+func (handler *DharitriHandler) issueAndWhitelistTokens(ctx context.Context, params IssueTokenParams) {
+	handler.issueUniversalToken(ctx, params)
+
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+	handler.TokensRegistry.RegisterChainSpecificToken(params.AbstractTokenIdentifier, tkData.DrtUniversalToken)
+
+	handler.setRolesForSpecificTokenOnSafe(ctx, params)
+	handler.addMappingInMultisig(ctx, params)
+	handler.whitelistTokenOnMultisig(ctx, params)
+	handler.setInitialSupply(ctx, params)
+	handler.setPairDecimalsOnAggregator(ctx, params)
+	handler.setMaxBridgeAmountOnSafe(ctx, params)
+	handler.setMaxBridgeAmountOnMultitransfer(ctx, params)
+}
+
+func (handler *DharitriHandler) issueUniversalToken(ctx context.Context, params IssueTokenParams) {
+	token := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+	require.NotNil(handler, token)
+
+	valueToMintInt, ok := big.NewInt(0).SetString(params.ValueToMintOnDrt, 10)
+	require.True(handler, ok)
+
+	// issue universal token
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.DCDTSystemContractAddress,
+		dcdtIssueCost,
+		issueTokenGasLimit,
+		issueFunction,
+		[]string{
+			hex.EncodeToString([]byte(params.DrtUniversalTokenDisplayName)),
+			hex.EncodeToString([]byte(params.DrtUniversalTokenTicker)),
+			hex.EncodeToString(valueToMintInt.Bytes()),
+			fmt.Sprintf("%02x", params.NumOfDecimalsUniversal),
+			hex.EncodeToString([]byte(canAddSpecialRoles)),
+			hex.EncodeToString([]byte(trueStr))})
+	drtUniversalToken := handler.getTokenNameFromResult(*txResult)
+	require.Greater(handler, len(drtUniversalToken), 0)
+	handler.TokensRegistry.RegisterUniversalToken(params.AbstractTokenIdentifier, drtUniversalToken)
+	log.Info("issue universal token tx executed", "hash", hash, "status", txResult.Status, "token", drtUniversalToken, "owner", handler.OwnerKeys.DrtAddress)
+}
+
+func (handler *DharitriHandler) issueChainSpecificToken(ctx context.Context, params IssueTokenParams) {
+	valueToMintInt, ok := big.NewInt(0).SetString(params.ValueToMintOnDrt, 10)
+	require.True(handler, ok)
+
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.DCDTSystemContractAddress,
+		dcdtIssueCost,
+		issueTokenGasLimit,
+		issueFunction,
+		[]string{
+			hex.EncodeToString([]byte(params.DrtChainSpecificTokenDisplayName)),
+			hex.EncodeToString([]byte(params.DrtChainSpecificTokenTicker)),
+			hex.EncodeToString(valueToMintInt.Bytes()),
+			fmt.Sprintf("%02x", params.NumOfDecimalsChainSpecific),
+			hex.EncodeToString([]byte(canAddSpecialRoles)),
+			hex.EncodeToString([]byte(trueStr))})
+	drtChainSpecificToken := handler.getTokenNameFromResult(*txResult)
+	require.Greater(handler, len(drtChainSpecificToken), 0)
+	handler.TokensRegistry.RegisterChainSpecificToken(params.AbstractTokenIdentifier, drtChainSpecificToken)
+	log.Info("issue chain specific token tx executed", "hash", hash, "status", txResult.Status, "token", drtChainSpecificToken, "owner", handler.OwnerKeys.DrtAddress)
+}
+
+func (handler *DharitriHandler) setLocalRolesForUniversalTokenOnWrapper(ctx context.Context, params IssueTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// set local roles bridged tokens wrapper
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.DCDTSystemContractAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setSpecialRoleFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtUniversalToken)),
+			handler.WrapperAddress.Hex(),
+			hex.EncodeToString([]byte(dcdtRoleLocalMint)),
+			hex.EncodeToString([]byte(dcdtRoleLocalBurn))})
+	log.Info("set local roles bridged tokens wrapper tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) transferChainSpecificTokenToSCs(ctx context.Context, params IssueTokenParams) {
+	valueToMintInt, ok := big.NewInt(0).SetString(params.ValueToMintOnDrt, 10)
+	require.True(handler, ok)
+
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// transfer to wrapper sc
+	initialMintValue := valueToMintInt.Div(valueToMintInt, big.NewInt(3))
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.WrapperAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		dcdtTransferFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+			hex.EncodeToString(initialMintValue.Bytes()),
+			hex.EncodeToString([]byte(depositLiquidityFunction))})
+	log.Info("transfer to wrapper sc tx executed", "hash", hash, "status", txResult.Status)
+
+	// transfer to safe sc
+	hash, txResult = handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.SafeAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		dcdtTransferFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+			hex.EncodeToString(initialMintValue.Bytes())})
+	log.Info("transfer to safe sc tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) addUniversalTokenToWrapper(ctx context.Context, params IssueTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// add wrapped token
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.WrapperAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		addWrappedTokenFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtUniversalToken)),
+			fmt.Sprintf("%02x", params.NumOfDecimalsUniversal),
+		})
+	log.Info("add wrapped token tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) whitelistTokenOnWrapper(ctx context.Context, params IssueTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// wrapper whitelist token
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.WrapperAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		whitelistTokenFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+			fmt.Sprintf("%02x", params.NumOfDecimalsChainSpecific),
+			hex.EncodeToString([]byte(tkData.DrtUniversalToken))})
+	log.Info("wrapper whitelist token tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) setRolesForSpecificTokenOnSafe(ctx context.Context, params IssueTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// set local roles dcdt safe
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.DCDTSystemContractAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setSpecialRoleFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+			handler.SafeAddress.Hex(),
+			hex.EncodeToString([]byte(dcdtRoleLocalMint)),
+			hex.EncodeToString([]byte(dcdtRoleLocalBurn))})
+	log.Info("set local roles dcdt safe tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) addMappingInMultisig(ctx context.Context, params IssueTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// add mapping
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.MultisigAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		addMappingFunction,
+		[]string{
+			hex.EncodeToString(sui.AppendLengthToData(tkData.PeerChainTokenAddress)),
+			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken))})
+	log.Info("add mapping tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) whitelistTokenOnMultisig(ctx context.Context, params IssueTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// whitelist token
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.MultisigAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		dcdtSafeAddTokenToWhitelistFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+			hex.EncodeToString([]byte(params.DrtChainSpecificTokenTicker)),
+			getHexBool(params.IsMintBurnOnDrT),
+			getHexBool(params.IsNativeOnDrT),
+			hex.EncodeToString(zeroValueBigInt.Bytes()), // total_balance
+			hex.EncodeToString(zeroValueBigInt.Bytes()), // mint_balance
+			hex.EncodeToString(zeroValueBigInt.Bytes()), // burn_balance
+		})
+	log.Info("whitelist token tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) setInitialSupply(ctx context.Context, params IssueTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// set initial supply
+	if len(params.InitialSupplyValue) > 0 {
+		initialSupply, okConvert := big.NewInt(0).SetString(params.InitialSupplyValue, 10)
+		require.True(handler, okConvert)
+
+		if params.IsMintBurnOnDrT {
+			hash, txResult := handler.ChainSimulator.ScCall(
+				ctx,
+				handler.OwnerKeys.DrtSk,
+				handler.MultisigAddress,
+				zeroStringValue,
+				setCallsGasLimit,
+				initSupplyMintBurnDcdtSafe,
+				[]string{
+					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+					hex.EncodeToString(initialSupply.Bytes()),
+					hex.EncodeToString([]byte{0}),
+				},
+			)
+			log.Info("initial supply tx executed", "hash", hash, "status", txResult.Status,
+				"initial mint", params.InitialSupplyValue, "initial burned", "0")
+		} else {
+			hash, txResult := handler.ChainSimulator.ScCall(
+				ctx,
+				handler.OwnerKeys.DrtSk,
+				handler.MultisigAddress,
+				zeroStringValue,
+				setCallsGasLimit,
+				dcdtTransferFunction,
+				[]string{
+					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+					hex.EncodeToString(initialSupply.Bytes()),
+					hex.EncodeToString([]byte(initSupplyDcdtSafe)),
+					hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+					hex.EncodeToString(initialSupply.Bytes()),
+				})
+
+			log.Info("initial supply tx executed", "hash", hash, "status", txResult.Status,
+				"initial value", params.InitialSupplyValue)
+		}
+	}
+}
+
+func (handler *DharitriHandler) setPairDecimalsOnAggregator(ctx context.Context, params IssueTokenParams) {
+	// setPairDecimals on aggregator
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.AggregatorAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		setPairDecimalsFunction,
+		[]string{
+			hex.EncodeToString([]byte(gwei)),
+			hex.EncodeToString([]byte(params.DrtChainSpecificTokenTicker)),
+			fmt.Sprintf("%02x", params.NumOfDecimalsChainSpecific)})
+	log.Info("setPairDecimals tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) setMaxBridgeAmountOnSafe(ctx context.Context, params IssueTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// safe set max bridge amount for token
+	maxBridgedAmountForTokenInt, _ := big.NewInt(0).SetString(maxBridgedAmountForToken, 10)
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.MultisigAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		dcdtSafeSetMaxBridgedAmountForTokenFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+			hex.EncodeToString(maxBridgedAmountForTokenInt.Bytes())})
+	log.Info("safe set max bridge amount for token tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) setMaxBridgeAmountOnMultitransfer(ctx context.Context, params IssueTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// multi-transfer set max bridge amount for token
+	maxBridgedAmountForTokenInt, _ := big.NewInt(0).SetString(maxBridgedAmountForToken, 10)
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.MultisigAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		multiTransferDcdtSetMaxBridgedAmountForTokenFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtChainSpecificToken)),
+			hex.EncodeToString(maxBridgedAmountForTokenInt.Bytes())})
+	log.Info("multi-transfer set max bridge amount for token tx executed", "hash", hash, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) getTokenNameFromResult(txResult data.TransactionOnNetwork) string {
+	for _, event := range txResult.Logs.Events {
+		if event.Identifier == issueFunction {
+			require.Greater(handler, len(event.Topics), 1)
+
+			return string(event.Topics[0])
+		}
+	}
+
+	require.Fail(handler, "did not find the event with the issue identifier")
+	return ""
+}
+
+// SubmitAggregatorBatch will submit the aggregator batch
+func (handler *DharitriHandler) SubmitAggregatorBatch(ctx context.Context, params IssueTokenParams) {
+	txHashes := make([]string, 0, len(handler.OraclesKeys))
+	for _, key := range handler.OraclesKeys {
+		hash := handler.submitAggregatorBatchForKey(ctx, key, params)
+		txHashes = append(txHashes, hash)
+	}
+
+	for _, hash := range txHashes {
+		txResult := handler.ChainSimulator.GetTransactionResult(ctx, hash)
+		log.Info("submit aggregator batch tx", "hash", hash, "status", txResult.Status)
+	}
+}
+
+func (handler *DharitriHandler) submitAggregatorBatchForKey(ctx context.Context, key KeysHolder, params IssueTokenParams) string {
+	timestamp := handler.ChainSimulator.GetBlockchainTimeStamp(ctx)
+	require.Greater(handler, timestamp, uint64(0), "something went wrong and the chain simulator returned 0 for the current timestamp")
+
+	timestampAsBigInt := big.NewInt(0).SetUint64(timestamp)
+
+	hash := handler.ChainSimulator.ScCallWithoutGenerateBlocks(
+		ctx,
+		key.DrtSk,
+		handler.AggregatorAddress,
+		zeroStringValue,
+		setCallsGasLimit,
+		submitBatchFunction,
+		[]string{
+			hex.EncodeToString([]byte(gwei)),
+			hex.EncodeToString([]byte(params.DrtChainSpecificTokenTicker)),
+			hex.EncodeToString(timestampAsBigInt.Bytes()),
+			hex.EncodeToString(feeInt.Bytes()),
+			fmt.Sprintf("%02x", params.NumOfDecimalsChainSpecific)})
+
+	log.Info("submit aggregator batch tx sent", "transaction hash", hash, "submitter", key.DrtAddress.Bech32())
+
+	return hash
+}
+
+// SendDepositTransactionFromDharitri will send the deposit transaction from DharitrI
+func (handler *DharitriHandler) SendDepositTransactionFromDharitri(
+	ctx context.Context,
+	token *TokenData,
+	params TestTokenParams,
+	value *big.Int,
+	receiver []byte,
+) {
+	if params.HasChainSpecificToken {
+		handler.unwrapCreateTransaction(ctx, token, value, receiver)
+		return
+	}
+
+	handler.createTransactionWithoutUnwrap(ctx, token, value, receiver)
+}
+
+func (handler *DharitriHandler) createTransactionWithoutUnwrap(ctx context.Context, token *TokenData, value *big.Int, receiver []byte) {
+	// create transaction params
+	params := []string{
+		hex.EncodeToString([]byte(token.DrtUniversalToken)),
+		hex.EncodeToString(value.Bytes()),
+		hex.EncodeToString([]byte(createTransactionFunction)),
+		hex.EncodeToString(receiver),
+	}
+	dataField := strings.Join(params, "@")
+
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.TestKeys.DrtSk,
+		handler.SafeAddress,
+		zeroStringValue,
+		createDepositGasLimit+gasLimitPerDataByte*uint64(len(dataField)),
+		dcdtTransferFunction,
+		params,
+	)
+	log.Info("DharitrI -> peer chain createTransaction sent", "hash", hash, "token", token.DrtUniversalToken, "status", txResult.Status)
+}
+
+func (handler *DharitriHandler) unwrapCreateTransaction(ctx context.Context, token *TokenData, value *big.Int, receiver []byte) {
+	// create transaction params
+	params := []string{
+		hex.EncodeToString([]byte(token.DrtUniversalToken)),
+		hex.EncodeToString(value.Bytes()),
+		hex.EncodeToString([]byte(unwrapTokenCreateTransactionFunction)),
+		hex.EncodeToString([]byte(token.DrtChainSpecificToken)),
+		hex.EncodeToString(handler.SafeAddress.Bytes()),
+		hex.EncodeToString(receiver),
+	}
+	dataField := strings.Join(params, "@")
+
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		handler.TestKeys.DrtSk,
+		handler.WrapperAddress,
+		zeroStringValue,
+		createDepositGasLimit+gasLimitPerDataByte*uint64(len(dataField)),
+		dcdtTransferFunction,
+		params,
+	)
+	log.Info("DharitrI -> peer chain unwrapCreateTransaction sent", "hash", hash, "token", token.DrtUniversalToken, "status", txResult.Status)
+}
+
+// TestWithdrawFees will try to withdraw the fees for the provided token from the safe contract to the owner
+func (handler *DharitriHandler) TestWithdrawFees(
+	ctx context.Context,
+	token string,
+	expectedDeltaForRefund *big.Int,
+	expectedDeltaForAccumulated *big.Int,
+) {
+	handler.withdrawFees(ctx, token, expectedDeltaForRefund, getRefundFeesForEthereumFunction, withdrawRefundFeesForEthereumFunction)
+	handler.withdrawFees(ctx, token, expectedDeltaForAccumulated, getTransactionFeesFunction, withdrawTransactionFeesFunction)
+}
+
+func (handler *DharitriHandler) withdrawFees(ctx context.Context,
+	token string,
+	expectedDelta *big.Int,
+	getFunction string,
+	withdrawFunction string,
+) {
+	queryParams := []string{
+		hex.EncodeToString([]byte(token)),
+	}
+	responseData := handler.ChainSimulator.ExecuteVMQuery(ctx, handler.SafeAddress, getFunction, queryParams)
+	value := big.NewInt(0).SetBytes(responseData[0])
+	require.Equal(handler, expectedDelta.String(), value.String())
+	if expectedDelta.Cmp(zeroValueBigInt) == 0 {
+		return
+	}
+
+	handler.ChainSimulator.GenerateBlocks(ctx, 5) // ensure block finality
+	initialBalanceStr := handler.ChainSimulator.GetDCDTBalance(ctx, handler.OwnerKeys.DrtAddress, token)
+	initialBalance, ok := big.NewInt(0).SetString(initialBalanceStr, 10)
+	require.True(handler, ok)
+
+	handler.ChainSimulator.ScCall(
+		ctx,
+		handler.OwnerKeys.DrtSk,
+		handler.MultisigAddress,
+		zeroStringValue,
+		generalSCCallGasLimit,
+		withdrawFunction,
+		[]string{
+			hex.EncodeToString([]byte(token)),
+		},
+	)
+
+	handler.ChainSimulator.GenerateBlocks(ctx, 5) // ensure block finality
+	finalBalanceStr := handler.ChainSimulator.GetDCDTBalance(ctx, handler.OwnerKeys.DrtAddress, token)
+	finalBalance, ok := big.NewInt(0).SetString(finalBalanceStr, 10)
+	require.True(handler, ok)
+
+	require.Equal(handler, expectedDelta, finalBalance.Sub(finalBalance, initialBalance),
+		fmt.Sprintf("mismatch on balance check after the call to %s: initial balance: %s, final balance %s, expected delta: %s",
+			withdrawFunction, initialBalanceStr, finalBalanceStr, expectedDelta.String()))
+}
+
+// TransferToken is able to create an DCDT transfer
+func (handler *DharitriHandler) TransferToken(ctx context.Context, source KeysHolder, receiver KeysHolder, amount *big.Int, params TestTokenParams) {
+	tkData := handler.TokensRegistry.GetTokenData(params.AbstractTokenIdentifier)
+
+	// transfer to the test key, so it will have funds to carry on with the deposits
+	hash, txResult := handler.ChainSimulator.ScCall(
+		ctx,
+		source.DrtSk,
+		receiver.DrtAddress,
+		zeroStringValue,
+		createDepositGasLimit,
+		dcdtTransferFunction,
+		[]string{
+			hex.EncodeToString([]byte(tkData.DrtUniversalToken)),
+			hex.EncodeToString(amount.Bytes())})
+
+	log.Info("transfer to tx executed",
+		"source address", source.DrtAddress.Bech32(),
+		"receiver", receiver.DrtAddress.Bech32(),
+		"token", tkData.DrtUniversalToken,
+		"amount", amount.String(),
+		"hash", hash, "status", txResult.Status)
+}
+
+func getHexBool(input bool) string {
+	if input {
+		return hexTrue
+	}
+
+	return hexFalse
+}

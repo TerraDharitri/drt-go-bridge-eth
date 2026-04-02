@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  sc-calls-executor:
+    build:
+      context: ..
+      dockerfile: scCallsExecutor.Dockerfile
+    restart: unless-stopped
+    volumes:
+      - "../keys:/terradharitri/keys"
+    # change the `network-address`, `sc-proxy-address` and `private-key-file` accordingly
+    entrypoint: "./scCallsExecutor \
+    -log-level *:DEBUG \
+    -log-save \
+    -network-address https://devnet-gateway.terradharitri.com \
+    -sc-proxy-address drt1qqqqqqqqqqqqqpgq5l0743nyv45vdptmfh3jydkqtyzjqpgsrcjq6ctp9g \
+    -private-key-file ./keys/walletKey.pem"

@@ -1,0 +1,527 @@
+//go:build slow
+
+// To run these slow tests, simply add the slow tag on the go test command. Also, provide a chain simulator instance on the 8085 port
+// example: go test -tags slow
+
+package slowTests
+
+import (
+	"context"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"math/big"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/TerraDharitri/drt-go-bridge-eth/integrationTests/mock"
+	"github.com/TerraDharitri/drt-go-bridge-eth/integrationTests/relayers/slowTests/framework"
+	logger "github.com/TerraDharitri/drt-go-chain-logger"
+	"github.com/TerraDharitri/drt-go-sdk/data"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	timeout                   = time.Minute * 15
+	projectedShardForTestKeys = byte(2)
+)
+
+func TestRelayersShouldExecuteTransfers(t *testing.T) {
+	t.Skip()
+	usdcToken := GenerateTestUSDCToken()
+	memeToken := GenerateTestMEMEToken()
+
+	_ = testRelayersWithChainSimulatorAndTokens(
+		t,
+		make(chan error),
+		usdcToken,
+		memeToken,
+	)
+}
+
+func TestRelayersShouldExecuteTransfersWithMintBurnTokens(t *testing.T) {
+	t.Skip()
+	eurocToken := GenerateTestEUROCToken()
+	moaToken := GenerateTestMOAToken()
+
+	_ = testRelayersWithChainSimulatorAndTokens(
+		t,
+		make(chan error),
+		eurocToken,
+		moaToken,
+	)
+}
+
+func TestRelayersShouldExecuteTransfersWithSCCallsWithArguments(t *testing.T) {
+	t.Skip()
+	dummyAddress := strings.Repeat("2", 32)
+	dummyUint64 := string([]byte{37})
+
+	callData := createScCallData("callPayableWithParams", 50000000, dummyUint64, dummyAddress)
+
+	usdcToken := GenerateTestUSDCToken()
+	usdcToken.TestOperations[2].DrtSCCallData = callData
+
+	memeToken := GenerateTestMEMEToken()
+	memeToken.TestOperations[2].DrtSCCallData = callData
+
+	testSetup := testRelayersWithChainSimulatorAndTokens(
+		t,
+		make(chan error),
+		usdcToken,
+		memeToken,
+	)
+
+	testCallPayableWithParamsWasCalled(
+		testSetup,
+		37,
+		usdcToken.AbstractTokenIdentifier,
+		memeToken.AbstractTokenIdentifier,
+	)
+}
+
+func TestRelayersShouldExecuteTransfersWithSCCallsWithArgumentsWithMintBurnTokens(t *testing.T) {
+	t.Skip()
+	dummyAddress := strings.Repeat("2", 32)
+	dummyUint64 := string([]byte{37})
+
+	callData := createScCallData("callPayableWithParams", 50000000, dummyUint64, dummyAddress)
+
+	eurocToken := GenerateTestEUROCToken()
+	eurocToken.TestOperations[2].DrtSCCallData = callData
+
+	moaToken := GenerateTestMOAToken()
+	moaToken.TestOperations[2].DrtSCCallData = callData
+
+	testSetup := testRelayersWithChainSimulatorAndTokens(
+		t,
+		make(chan error),
+		eurocToken,
+		moaToken,
+	)
+
+	testCallPayableWithParamsWasCalled(
+		testSetup,
+		37,
+		eurocToken.AbstractTokenIdentifier,
+		moaToken.AbstractTokenIdentifier,
+	)
+}
+
+func TestRelayerShouldExecuteTransfersAndNotCatchErrors(t *testing.T) {
+	t.Skip()
+	errorString := "ERROR"
+	mockLogObserver := mock.NewMockLogObserver(errorString)
+	err := logger.AddLogObserver(mockLogObserver, &logger.PlainFormatter{})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, logger.RemoveLogObserver(mockLogObserver))
+	}()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stopChan := make(chan error, 1000) // ensure sufficient error buffer
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-mockLogObserver.LogFoundChan():
+				stopChan <- errors.New("logger should have not caught errors")
+			}
+		}
+	}()
+
+	memeToken := GenerateTestMEMEToken()
+
+	_ = testRelayersWithChainSimulatorAndTokens(
+		t,
+		stopChan,
+		memeToken,
+	)
+}
+
+func TestRelayersShouldExecuteTransfersWithInitSupply(t *testing.T) {
+	t.Skip()
+	usdcToken := GenerateTestUSDCToken()
+	usdcToken.InitialSupplyValue = "100000"
+
+	memeToken := GenerateTestMEMEToken()
+	memeToken.InitialSupplyValue = "200000"
+
+	_ = testRelayersWithChainSimulatorAndTokens(
+		t,
+		make(chan error),
+		usdcToken,
+		memeToken,
+	)
+}
+
+func testRelayersWithChainSimulatorAndTokens(tb testing.TB, manualStopChan chan error, tokens ...framework.TestTokenParams) *framework.TestSetup {
+	startsFromEthFlow, startsFromDrTFlow := createFlowsBasedOnToken(tb, tokens...)
+
+	setupFunc := func(tb testing.TB, setup *framework.TestSetup) {
+		startsFromDrTFlow.setup = setup
+		startsFromEthFlow.setup = setup
+
+		setup.IssueAndConfigureTokens(tokens...)
+		setup.DharitriHandler.CheckForZeroBalanceOnReceivers(setup.Ctx, tokens...)
+		if len(startsFromEthFlow.tokens) > 0 {
+			setup.PeerChainHandler.CreateBatchOnPeerChain(setup.Ctx, setup.DharitriHandler.TestCallerAddress, startsFromEthFlow.tokens...)
+		}
+		if len(startsFromDrTFlow.tokens) > 0 {
+			setup.CreateBatchOnDharitrI(startsFromDrTFlow.tokens...)
+		}
+	}
+
+	processFunc := func(tb testing.TB, setup *framework.TestSetup) bool {
+		if startsFromEthFlow.process() && startsFromDrTFlow.process() {
+			setup.TestWithdrawTotalFeesOnPeerChainForTokens(startsFromDrTFlow.tokens...)
+			setup.TestWithdrawTotalFeesOnPeerChainForTokens(startsFromEthFlow.tokens...)
+
+			return true
+		}
+
+		// commit blocks in order to execute incoming txs from relayers
+		switch handler := setup.PeerChainHandler.(type) {
+		case *framework.EthereumHandler:
+			handler.SimulatedChain.Commit()
+		case *framework.SuiHandler:
+			handler.SuiChainSimulator.GenerateBlocks(setup.Ctx, 1)
+		default:
+			panic(fmt.Sprintf("unsupported peer chain handler type: %T", handler))
+		}
+		setup.ChainSimulator.GenerateBlocks(setup.Ctx, 1)
+		require.LessOrEqual(tb, setup.ScCallerModuleInstance.GetNumSentTransaction(), setup.GetNumScCallsOperations())
+
+		return false
+	}
+
+	chainType := tokens[0].PeerChainType
+
+	return testRelayersWithChainSimulator(tb,
+		setupFunc,
+		processFunc,
+		manualStopChan,
+		chainType,
+	)
+}
+
+func createFlowsBasedOnToken(tb testing.TB, tokens ...framework.TestTokenParams) (*startsFromEthereumFlow, *startsFromDharitrIFlow) {
+	startsFromEthFlow := &startsFromEthereumFlow{
+		TB:     tb,
+		tokens: make([]framework.TestTokenParams, 0, len(tokens)),
+	}
+
+	startsFromDrTFlow := &startsFromDharitrIFlow{
+		TB:     tb,
+		tokens: make([]framework.TestTokenParams, 0, len(tokens)),
+	}
+
+	// split the tokens from where should the bridge start
+	for _, token := range tokens {
+		if token.IsNativeOnPeerChain {
+			startsFromEthFlow.tokens = append(startsFromEthFlow.tokens, token)
+			continue
+		}
+		if token.IsNativeOnDrT {
+			startsFromDrTFlow.tokens = append(startsFromDrTFlow.tokens, token)
+			continue
+		}
+		require.Fail(tb, "invalid setup, found a token that is not native on any chain", "abstract identifier", token.AbstractTokenIdentifier)
+	}
+
+	return startsFromEthFlow, startsFromDrTFlow
+}
+
+func testRelayersWithChainSimulator(tb testing.TB,
+	setupFunc func(tb testing.TB, setup *framework.TestSetup),
+	processLoopFunc func(tb testing.TB, setup *framework.TestSetup) bool,
+	stopChan chan error,
+	chainType framework.ChainType,
+) *framework.TestSetup {
+	defer func() {
+		r := recover()
+		if r != nil {
+			require.Fail(tb, fmt.Sprintf("should have not panicked: %v", r))
+		}
+	}()
+
+	testSetup := framework.NewTestSetup(tb, chainType)
+	log.Info(fmt.Sprintf(framework.LogStepMarker, "calling setupFunc"))
+	setupFunc(tb, testSetup)
+
+	testSetup.StartRelayersAndScModule()
+	defer testSetup.Close()
+
+	log.Info(fmt.Sprintf(framework.LogStepMarker, "running and continously call processLoopFunc"))
+	interrupt := make(chan os.Signal, 1)
+	for {
+		select {
+		case <-interrupt:
+			require.Fail(tb, "signal interrupted")
+			return testSetup
+		case <-time.After(timeout):
+			require.Fail(tb, "time out")
+			return testSetup
+		case err := <-stopChan:
+			require.Nil(tb, err)
+			return testSetup
+		default:
+			testDone := processLoopFunc(tb, testSetup)
+			if testDone {
+				return testSetup
+			}
+		}
+	}
+}
+
+func createBadToken() framework.TestTokenParams {
+	return framework.TestTokenParams{
+		IssueTokenParams: framework.IssueTokenParams{
+			AbstractTokenIdentifier:          "BAD",
+			NumOfDecimalsUniversal:           6,
+			NumOfDecimalsChainSpecific:       6,
+			DrtUniversalTokenTicker:          "BAD",
+			DrtChainSpecificTokenTicker:      "ETHBAD",
+			DrtUniversalTokenDisplayName:     "WrappedBAD",
+			DrtChainSpecificTokenDisplayName: "EthereumWrappedBAD",
+			ValueToMintOnDrt:                 "10000000000",
+			PeerChainTokenName:               "ETHTOKEN",
+			PeerChainTokenSymbol:             "ETHT",
+			ValueToMintOnPeerChain:           "10000000000",
+		},
+		TestOperations: []framework.TokenOperations{
+			{
+				ValueToTransferToDrt: big.NewInt(5000),
+				ValueToSendFromDrT:   big.NewInt(2500),
+			},
+			{
+				ValueToTransferToDrt: big.NewInt(7000),
+				ValueToSendFromDrT:   big.NewInt(300),
+			},
+			{
+				ValueToTransferToDrt: big.NewInt(1000),
+				ValueToSendFromDrT:   nil,
+				DrtSCCallData:        createScCallData("callPayable", 50000000),
+			},
+		},
+		DCDTSafeExtraBalance:          big.NewInt(0),
+		PeerChainTestAddrExtraBalance: big.NewInt(0),
+	}
+}
+
+func TestRelayersShouldNotExecuteTransfers(t *testing.T) {
+	t.Skip()
+	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
+		badToken := createBadToken()
+		badToken.IsNativeOnPeerChain = true
+		badToken.IsMintBurnOnPeerChain = false
+		badToken.IsNativeOnDrT = true
+		badToken.IsMintBurnOnDrT = false
+		badToken.HasChainSpecificToken = true
+
+		expectedStringInLogs := "error = invalid setup isNativeOnEthereum = true, isNativeOnDharitrI = true"
+		testRelayersShouldNotExecuteTransfers(t, expectedStringInLogs, badToken)
+	})
+	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = true", func(t *testing.T) {
+		badToken := createBadToken()
+		badToken.IsNativeOnPeerChain = true
+		badToken.IsMintBurnOnPeerChain = false
+		badToken.IsNativeOnDrT = true
+		badToken.IsMintBurnOnDrT = true
+		badToken.HasChainSpecificToken = false
+
+		expectedStringInLogs := "error = invalid setup isNativeOnEthereum = true, isNativeOnDharitrI = true"
+		testRelayersShouldNotExecuteTransfers(t, expectedStringInLogs, badToken)
+	})
+	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = true, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
+		badToken := createBadToken()
+		badToken.IsNativeOnPeerChain = true
+		badToken.IsMintBurnOnPeerChain = true
+		badToken.IsNativeOnDrT = true
+		badToken.IsMintBurnOnDrT = false
+		badToken.HasChainSpecificToken = true
+
+		testEthContractsShouldError(t, badToken)
+	})
+	t.Run("IsNativeOnPeerChain = false, IsMintBurnOnPeerChain = true, isNativeOnDrT = false, isMintBurnOnDrT = true", func(t *testing.T) {
+		badToken := createBadToken()
+		badToken.IsNativeOnPeerChain = false
+		badToken.IsMintBurnOnPeerChain = true
+		badToken.IsNativeOnDrT = false
+		badToken.IsMintBurnOnDrT = true
+		badToken.HasChainSpecificToken = true
+
+		testEthContractsShouldError(t, badToken)
+	})
+}
+
+func testRelayersShouldNotExecuteTransfers(
+	tb testing.TB,
+	expectedStringInLogs string,
+	tokens ...framework.TestTokenParams,
+) {
+	startsFromEthFlow, startsFromDrTFlow := createFlowsBasedOnToken(tb, tokens...)
+
+	setupFunc := func(tb testing.TB, setup *framework.TestSetup) {
+		startsFromDrTFlow.setup = setup
+		startsFromEthFlow.setup = setup
+
+		setup.IssueAndConfigureTokens(tokens...)
+		setup.DharitriHandler.CheckForZeroBalanceOnReceivers(setup.Ctx, tokens...)
+		if len(startsFromEthFlow.tokens) > 0 {
+			setup.PeerChainHandler.CreateBatchOnPeerChain(setup.Ctx, setup.DharitriHandler.TestCallerAddress, startsFromEthFlow.tokens...)
+		}
+		if len(startsFromDrTFlow.tokens) > 0 {
+			setup.CreateBatchOnDharitrI(startsFromDrTFlow.tokens...)
+		}
+	}
+
+	processFunc := func(tb testing.TB, setup *framework.TestSetup) bool {
+		if startsFromEthFlow.process() && startsFromDrTFlow.process() {
+			return true
+		}
+
+		// commit blocks in order to execute incoming txs from relayers
+		switch handler := setup.PeerChainHandler.(type) {
+		case *framework.EthereumHandler:
+			handler.SimulatedChain.Commit()
+		case *framework.SuiHandler:
+			handler.SuiChainSimulator.GenerateBlocks(setup.Ctx, 1)
+		default:
+			panic(fmt.Sprintf("unsupported peer chain handler type: %T", handler))
+		}
+		setup.ChainSimulator.GenerateBlocks(setup.Ctx, 1)
+
+		return false
+	}
+
+	chainType := tokens[0].PeerChainType
+
+	// start a mocked log observer that is looking for a specific relayer error
+	chanCnt := 0
+	mockLogObserver := mock.NewMockLogObserver(expectedStringInLogs)
+	err := logger.AddLogObserver(mockLogObserver, &logger.PlainFormatter{})
+	require.NoError(tb, err)
+	defer func() {
+		require.NoError(tb, logger.RemoveLogObserver(mockLogObserver))
+	}()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	numOfTimesToRepeatErrorForRelayer := 10
+	numOfErrorsToWait := numOfTimesToRepeatErrorForRelayer * framework.NumRelayers
+
+	stopChan := make(chan error, 1)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-mockLogObserver.LogFoundChan():
+				chanCnt++
+				if chanCnt >= numOfErrorsToWait {
+					log.Info(fmt.Sprintf("test passed, relayers are stuck, expected string `%s` found in all relayers' logs for %d times", expectedStringInLogs, numOfErrorsToWait))
+					stopChan <- nil
+					return
+				}
+			}
+		}
+	}()
+
+	_ = testRelayersWithChainSimulator(tb, setupFunc, processFunc, stopChan, chainType)
+}
+
+func testEthContractsShouldError(tb testing.TB, testToken framework.TestTokenParams) {
+	setupFunc := func(tb testing.TB, setup *framework.TestSetup) {
+		setup.IssueAndConfigureTokens(testToken)
+
+		token := setup.GetTokenData(testToken.AbstractTokenIdentifier)
+		require.NotNil(tb, token)
+
+		valueToMintOnEth, ok := big.NewInt(0).SetString(testToken.ValueToMintOnPeerChain, 10)
+		require.True(tb, ok)
+
+		receiverKeys := framework.GenerateDrtPrivatePublicKey(tb, projectedShardForTestKeys)
+		switch handler := setup.PeerChainHandler.(type) {
+		case *framework.EthereumHandler:
+			auth, _ := bind.NewKeyedTransactorWithChainID(setup.DepositorKeys.EthSK, handler.ChainID)
+			_, err := handler.SafeContract.Deposit(auth, common.Address(token.PeerChainTokenAddress), valueToMintOnEth, receiverKeys.DrtAddress.AddressSlice())
+			require.Error(tb, err)
+		default:
+			panic(fmt.Sprintf("unsupported peer chain handler type: %T", handler))
+		}
+	}
+
+	processFunc := func(tb testing.TB, setup *framework.TestSetup) bool {
+		time.Sleep(time.Second) // allow go routines to start
+		return true
+	}
+	chainType := testToken.PeerChainType
+
+	_ = testRelayersWithChainSimulator(tb,
+		setupFunc,
+		processFunc,
+		make(chan error),
+		chainType,
+	)
+}
+
+func testCallPayableWithParamsWasCalled(testSetup *framework.TestSetup, value uint64, tokens ...string) {
+	if len(tokens) == 0 {
+		return
+	}
+
+	universalTokens := make([]string, 0, len(tokens))
+	for _, identifier := range tokens {
+		tkData := testSetup.GetTokenData(identifier)
+		universalTokens = append(universalTokens, tkData.DrtUniversalToken)
+	}
+
+	vmRequest := &data.VmValueRequest{
+		Address:  testSetup.DharitriHandler.TestCallerAddress.Bech32(),
+		FuncName: "getCalledDataParams",
+	}
+
+	vmResponse, err := testSetup.ChainSimulator.Proxy().ExecuteVMQuery(context.Background(), vmRequest)
+	require.Nil(testSetup, err)
+
+	returnedData := vmResponse.Data.ReturnData
+	require.Equal(testSetup, len(tokens), len(returnedData))
+
+	mapUniversalTokens := make(map[string]int)
+	for _, tokenIdentifier := range universalTokens {
+		mapUniversalTokens[tokenIdentifier] = 0
+	}
+
+	for _, buff := range returnedData {
+		parsedValue, parsedToken := processCalledDataParams(buff)
+		assert.Equal(testSetup, value, parsedValue)
+		mapUniversalTokens[parsedToken]++
+	}
+
+	assert.Equal(testSetup, len(tokens), len(mapUniversalTokens))
+	for _, numTokens := range mapUniversalTokens {
+		assert.Equal(testSetup, 1, numTokens)
+	}
+}
+
+func processCalledDataParams(buff []byte) (uint64, string) {
+	valBuff := buff[:8]
+	value := binary.BigEndian.Uint64(valBuff)
+
+	buff = buff[8+32+4:] // trim the nonce, address and length of the token
+	token := string(buff)
+
+	return value, token
+}
