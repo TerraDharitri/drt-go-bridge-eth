@@ -21,7 +21,7 @@ func createTestConfigs() config.ScCallsModuleConfig {
 		ProxyCacherExpirationSeconds:    60,
 		ProxyRestAPIEntityType:          string(sdkCore.ObserverNode),
 		IntervalToResendTxsInSeconds:    1,
-		PrivateKeyFile:                  "testdata/grace.pem",
+		PrivateKeyFile:                  "./testdata/grace.pem",
 		PollingIntervalInMillis:         10000,
 		Filter: config.PendingOperationsFilterConfig{
 			DeniedEthAddresses:  nil,

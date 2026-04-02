@@ -35,7 +35,7 @@ func createMockEthDharitrIBridgeArgs() ArgsEthereumToDharitrIBridge {
 			Chain:                        chain.Ethereum,
 			NetworkAddress:               "http://127.0.0.1:8545",
 			SafeContractAddress:          "5DdDe022a65F8063eE9adaC54F359CBF46166068",
-			PrivateKeyFile:               "testdata/grace.sk",
+			PrivateKeyFile:               "./testdata/grace.sk",
 			IntervalToResendTxsInSeconds: 0,
 			GasLimitBase:                 200000,
 			GasLimitForEach:              30000,
@@ -55,7 +55,7 @@ func createMockEthDharitrIBridgeArgs() ArgsEthereumToDharitrIBridge {
 			ClientAvailabilityAllowDelta:       10,
 		},
 		DharitrI: config.DharitrIConfig{
-			PrivateKeyFile:                  "testdata/grace.pem",
+			PrivateKeyFile:                  "./testdata/grace.pem",
 			IntervalToResendTxsInSeconds:    60,
 			NetworkAddress:                  "http://127.0.0.1:8079",
 			MultisigContractAddress:         "drt1qqqqqqqqqqqqqpgqgftcwj09u0nhmskrw7xxqcqh8qmzwyexd8ssr4um9c",

@@ -26,7 +26,7 @@ func createMockBridgeCommonArgs() ArgsBridgeCommon {
 
 	cfg := config.Config{
 		DharitrI: config.DharitrIConfig{
-			PrivateKeyFile:                  "testdata/grace.pem",
+			PrivateKeyFile:                  "./testdata/grace.pem",
 			IntervalToResendTxsInSeconds:    60,
 			NetworkAddress:                  "http://127.0.0.1:8079",
 			MultisigContractAddress:         "drt1qqqqqqqqqqqqqpgqgftcwj09u0nhmskrw7xxqcqh8qmzwyexd8ssr4um9c",

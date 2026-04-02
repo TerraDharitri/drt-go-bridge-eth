@@ -34,7 +34,7 @@ func createMockSuiDharitrIBridgeArgs() ArgsSuiToDharitrIBridge {
 		Sui: config.SuiConfig{
 			Chain:                              chain.Sui,
 			NetworkAddress:                     "http://127.0.0.1:8545",
-			PrivateKeyFile:                     "testdata/grace.seed",
+			PrivateKeyFile:                     "./testdata/grace.seed",
 			PackageId:                          "0xd85d37d10bb925c9e598169478c518f3da1090fbb8e027362e1c9c227f6fc4e0",
 			BridgeObjectId:                     "0x8e3dc49b158d7cd7a72720160b7e7aa0859cda4a7ebbcb4391dd4d7190777db1",
 			BridgeObjectInitialSharedVersion:   123456,
@@ -47,7 +47,7 @@ func createMockSuiDharitrIBridgeArgs() ArgsSuiToDharitrIBridge {
 			ClientAvailabilityAllowDelta:       10,
 		},
 		DharitrI: config.DharitrIConfig{
-			PrivateKeyFile:                  "testdata/grace.pem",
+			PrivateKeyFile:                  "./testdata/grace.pem",
 			IntervalToResendTxsInSeconds:    60,
 			NetworkAddress:                  "http://127.0.0.1:8079",
 			MultisigContractAddress:         "drt1qqqqqqqqqqqqqpgqgftcwj09u0nhmskrw7xxqcqh8qmzwyexd8ssr4um9c",

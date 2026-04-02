@@ -400,7 +400,7 @@ func createMockBridgeComponentsArgs(
 	ethereumChainMock *mock.EthereumChainMock,
 ) factory.ArgsEthereumToDharitrIBridge {
 
-	generalConfigs := CreateEthDrtBridgeComponentsConfig(index, "testdata", noGasStationURL)
+	generalConfigs := CreateEthDrtBridgeComponentsConfig(index, "./testdata", noGasStationURL)
 	return factory.ArgsEthereumToDharitrIBridge{
 		Configs: config.Configs{
 			GeneralConfig:   generalConfigs,
