@@ -1,20 +1,19 @@
 {
     "buildInfo": {
         "rustc": {
-            "version": "1.78.0",
-            "commitHash": "9b00956e56009bab2aa15d7bff10916599e3d6d6",
-            "commitDate": "2024-04-29",
+            "version": "1.85.0",
+            "commitHash": "4d91de4e48198da2e33413efdcd9cd2cc0c46688",
+            "commitDate": "2025-02-17",
             "channel": "Stable",
-            "short": "rustc 1.78.0 (9b00956e5 2024-04-29)"
+            "short": "rustc 1.85.0 (4d91de4e4 2025-02-17)"
         },
         "contractCrate": {
-            "name": "dharitri-price-aggregator-sc",
-            "version": "0.47.1",
-            "gitVersion": "v0.45.2.1-reproducible-378-ge72c201"
+            "name": "dharitri-sc-price-aggregator",
+            "version": "1.16.0"
         },
         "framework": {
             "name": "dharitri-sc",
-            "version": "0.53.2"
+            "version": "1.16.0"
         }
     },
     "name": "PriceAggregator",
@@ -221,6 +220,7 @@
         },
         {
             "name": "getOracles",
+            "title": "oracles",
             "mutability": "readonly",
             "inputs": [],
             "outputs": [
