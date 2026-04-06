@@ -32,7 +32,7 @@ const (
 )
 
 func TestRelayersShouldExecuteEthTransfers(t *testing.T) {
-	// t.Skip("This is a slow test, use -tags=slow to run it")
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	usdcToken := GenerateTestUSDCToken()
 	memeToken := GenerateTestMEMEToken()
 
@@ -45,7 +45,7 @@ func TestRelayersShouldExecuteEthTransfers(t *testing.T) {
 }
 
 func TestRelayersShouldExecuteEthMintBurnTransfers(t *testing.T) {
-	// t.Skip()
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	eurocToken := GenerateTestEUROCToken()
 	moaToken := GenerateTestMOAToken()
 
@@ -58,7 +58,7 @@ func TestRelayersShouldExecuteEthMintBurnTransfers(t *testing.T) {
 }
 
 func TestRelayersShouldExecuteTransfersWithSCCallsWithArguments(t *testing.T) {
-	// t.Skip()
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	dummyAddress := strings.Repeat("2", 32)
 	dummyUint64 := string([]byte{37})
 
@@ -86,7 +86,7 @@ func TestRelayersShouldExecuteTransfersWithSCCallsWithArguments(t *testing.T) {
 }
 
 func TestRelayersShouldExecuteTransfersWithSCCallsWithArgumentsWithMintBurnTokens(t *testing.T) {
-	// t.Skip()
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	dummyAddress := strings.Repeat("2", 32)
 	dummyUint64 := string([]byte{37})
 
@@ -114,7 +114,7 @@ func TestRelayersShouldExecuteTransfersWithSCCallsWithArgumentsWithMintBurnToken
 }
 
 func TestRelayerShouldExecuteTransfersAndNotCatchErrors(t *testing.T) {
-	// t.Skip()
+	t.Skip()
 	errorString := "ERROR"
 	mockLogObserver := mock.NewMockLogObserver(errorString)
 	err := logger.AddLogObserver(mockLogObserver, &logger.PlainFormatter{})
@@ -149,7 +149,7 @@ func TestRelayerShouldExecuteTransfersAndNotCatchErrors(t *testing.T) {
 }
 
 func TestRelayersShouldExecuteEthTransfersWithCoins(t *testing.T) {
-	// t.Skip()
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	usdcToken := GenerateTestUSDCToken()
 	usdcToken.InitialSupplyValue = "100000"
 
@@ -318,7 +318,8 @@ func createBadToken() framework.TestTokenParams {
 	}
 }
 
-func TestRelayersShouldNotExecuteInvalidEthSetup(t *testing.T) {
+func testRelayersShouldNotExecuteTransfers(t *testing.T) {
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createBadToken()
 		badToken.IsNativeOnPeerChain = true

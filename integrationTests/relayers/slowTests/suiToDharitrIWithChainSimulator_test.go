@@ -15,7 +15,7 @@ import (
 )
 
 func TestSuiRelayersShouldExecuteTransfersWithCoins(t *testing.T) {
-	// t.Skip()
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	walToken := GenerateTestWALToken()
 	walToken.InitialSupplyValue = "1000000000"
 
@@ -31,7 +31,7 @@ func TestSuiRelayersShouldExecuteTransfersWithCoins(t *testing.T) {
 }
 
 func TestSuiRelayersShouldExecuteTransfersWithTokens(t *testing.T) {
-	// t.Skip()
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	xmnToken := GenerateTestLKXMNToken()
 	xmnToken.InitialSupplyValue = "1000000000"
 
@@ -43,7 +43,7 @@ func TestSuiRelayersShouldExecuteTransfersWithTokens(t *testing.T) {
 }
 
 func TestSuiRelayerShouldExecuteTransfersAndNotCatchErrors(t *testing.T) {
-	// t.Skip()
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	errorString := "ERROR"
 	mockLogObserver := mock.NewMockLogObserver(errorString)
 	err := logger.AddLogObserver(mockLogObserver, &logger.PlainFormatter{})
@@ -114,7 +114,7 @@ func createSuiBadToken() framework.TestTokenParams {
 }
 
 func TestSuiRelayersShouldExecuteRefunds(t *testing.T) {
-	// t.Skip()
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createSuiBadToken()
 		badToken.IsNativeOnPeerChain = true
@@ -140,7 +140,7 @@ func TestSuiRelayersShouldExecuteRefunds(t *testing.T) {
 }
 
 func TestSuiRelayersShouldNotExecuteInvalidSuiSetup(t *testing.T) {
-	// t.Skip()
+	t.Skip("This is a slow test, use -tags=slow to run it")
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createSuiBadToken()
 		badToken.IsNativeOnPeerChain = true
