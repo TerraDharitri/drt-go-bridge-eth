@@ -32,7 +32,7 @@ const (
 )
 
 func TestRelayersShouldExecuteTransfers(t *testing.T) {
-	t.Skip()
+	// t.Skip("This is a slow test, use -tags=slow to run it")
 	usdcToken := GenerateTestUSDCToken()
 	memeToken := GenerateTestMEMEToken()
 

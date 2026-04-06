@@ -143,7 +143,7 @@ func (handler *DharitriHandler) deployContracts(ctx context.Context, chainType C
 	// deploy aggregator
 	stakeValue, _ := big.NewInt(0).SetString(minRelayerStake, 10)
 	aggregatorDeployParams := []string{
-		"",
+		hex.EncodeToString([]byte("REWA")),
 		hex.EncodeToString(stakeValue.Bytes()),
 		"01",
 		"02",
@@ -521,15 +521,21 @@ func (handler *DharitriHandler) PauseContractsForTokenChanges(ctx context.Contex
 }
 
 func (handler *DharitriHandler) stakeAddressesOnContract(ctx context.Context, contract *DrtAddress, allKeys []KeysHolder) {
+	stakeTokenID := "REWA"
+	stakeValue, _ := big.NewInt(0).SetString(minRelayerStake, 10)
 	for _, keys := range allKeys {
 		hash, txResult := handler.ChainSimulator.ScCall(
 			ctx,
 			keys.DrtSk,
 			contract,
-			minRelayerStake, // native value
+			zeroStringValue,
 			setCallsGasLimit,
-			stakeFunction,
-			[]string{},
+			dcdtTransferFunction,
+			[]string{
+				hex.EncodeToString([]byte(stakeTokenID)),
+				hex.EncodeToString(stakeValue.Bytes()),
+				hex.EncodeToString([]byte(stakeFunction)),
+			},
 		)
 		log.Info(fmt.Sprintf("Address %s staked on contract %s with transaction hash %s, status %s", keys.DrtAddress, contract, hash, txResult.Status))
 	}

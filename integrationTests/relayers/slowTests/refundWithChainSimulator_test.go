@@ -16,8 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRelayersShouldExecuteTransfersWithRefund(t *testing.T) {
-	t.Skip()
+func TestRelayersShouldExecuteRefunds(t *testing.T) {
 	t.Run("unknown marker and malformed SC call data should refund", func(t *testing.T) {
 		callData := []byte{5, 4, 55}
 		usdcToken := GenerateTestUSDCToken()

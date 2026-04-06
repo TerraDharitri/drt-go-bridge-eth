@@ -5,7 +5,7 @@ services:
     - 8085:8085
   volumes:
     - "../scripts:/docker/scripts"
-    - "./config/nodeOverrideDefault.toml:/terradharitri/config/nodeOverrideDefault.toml"
+    - "./config/nodeOverrideDefault.toml:/config/nodeOverrideDefault.toml"
   entrypoint: "./chainsimulator -log-level *:INFO"
 
  sui:
