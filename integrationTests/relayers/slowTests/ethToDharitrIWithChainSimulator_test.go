@@ -45,7 +45,7 @@ func TestRelayersShouldExecuteTransfers(t *testing.T) {
 }
 
 func TestRelayersShouldExecuteTransfersWithMintBurnTokens(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	eurocToken := GenerateTestEUROCToken()
 	moaToken := GenerateTestMOAToken()
 
@@ -58,7 +58,7 @@ func TestRelayersShouldExecuteTransfersWithMintBurnTokens(t *testing.T) {
 }
 
 func TestRelayersShouldExecuteTransfersWithSCCallsWithArguments(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	dummyAddress := strings.Repeat("2", 32)
 	dummyUint64 := string([]byte{37})
 
@@ -318,8 +318,7 @@ func createBadToken() framework.TestTokenParams {
 	}
 }
 
-func TestRelayersShouldNotExecuteTransfers(t *testing.T) {
-	t.Skip()
+func TestRelayersShouldExecuteRefunds(t *testing.T) {
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createBadToken()
 		badToken.IsNativeOnPeerChain = true
