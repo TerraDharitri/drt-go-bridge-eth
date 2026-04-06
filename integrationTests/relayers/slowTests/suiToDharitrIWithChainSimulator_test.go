@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRelayersShouldExecuteTransfersWithCoins(t *testing.T) {
+func TestSuiRelayersShouldExecuteTransfersWithCoins(t *testing.T) {
 	// t.Skip()
 	walToken := GenerateTestWALToken()
 	walToken.InitialSupplyValue = "1000000000"
@@ -30,7 +30,7 @@ func TestRelayersShouldExecuteTransfersWithCoins(t *testing.T) {
 	)
 }
 
-func TestRelayersShouldExecuteTransfersWithTokens(t *testing.T) {
+func TestSuiRelayersShouldExecuteTransfersWithTokens(t *testing.T) {
 	// t.Skip()
 	xmnToken := GenerateTestLKXMNToken()
 	xmnToken.InitialSupplyValue = "1000000000"
@@ -42,7 +42,7 @@ func TestRelayersShouldExecuteTransfersWithTokens(t *testing.T) {
 	)
 }
 
-func TestRelayerShouldExecuteTransfersAndNotCatchErrorsSui(t *testing.T) {
+func TestSuiRelayerShouldExecuteTransfersAndNotCatchErrors(t *testing.T) {
 	// t.Skip()
 	errorString := "ERROR"
 	mockLogObserver := mock.NewMockLogObserver(errorString)
@@ -113,7 +113,7 @@ func createSuiBadToken() framework.TestTokenParams {
 	}
 }
 
-func TestRelayersShouldExecuteRefunds(t *testing.T) {
+func TestSuiRelayersShouldExecuteRefunds(t *testing.T) {
 	// t.Skip()
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createSuiBadToken()
@@ -139,7 +139,7 @@ func TestRelayersShouldExecuteRefunds(t *testing.T) {
 	})
 }
 
-func TestRelayersShouldNotExecuteTransfersSui(t *testing.T) {
+func TestSuiRelayersShouldNotExecuteInvalidSetup(t *testing.T) {
 	// t.Skip()
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createSuiBadToken()

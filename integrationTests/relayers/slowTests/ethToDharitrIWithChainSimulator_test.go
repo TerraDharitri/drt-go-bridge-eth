@@ -31,7 +31,7 @@ const (
 	projectedShardForTestKeys = byte(2)
 )
 
-func TestRelayersShouldExecuteTransfers(t *testing.T) {
+func TestRelayersShouldExecuteEthTransfers(t *testing.T) {
 	// t.Skip("This is a slow test, use -tags=slow to run it")
 	usdcToken := GenerateTestUSDCToken()
 	memeToken := GenerateTestMEMEToken()
@@ -44,7 +44,7 @@ func TestRelayersShouldExecuteTransfers(t *testing.T) {
 	)
 }
 
-func TestRelayersShouldExecuteTransfersWithMintBurnTokens(t *testing.T) {
+func TestRelayersShouldExecuteEthMintBurnTransfers(t *testing.T) {
 	// t.Skip()
 	eurocToken := GenerateTestEUROCToken()
 	moaToken := GenerateTestMOAToken()
@@ -86,7 +86,7 @@ func TestRelayersShouldExecuteTransfersWithSCCallsWithArguments(t *testing.T) {
 }
 
 func TestRelayersShouldExecuteTransfersWithSCCallsWithArgumentsWithMintBurnTokens(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	dummyAddress := strings.Repeat("2", 32)
 	dummyUint64 := string([]byte{37})
 
@@ -114,7 +114,7 @@ func TestRelayersShouldExecuteTransfersWithSCCallsWithArgumentsWithMintBurnToken
 }
 
 func TestRelayerShouldExecuteTransfersAndNotCatchErrors(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	errorString := "ERROR"
 	mockLogObserver := mock.NewMockLogObserver(errorString)
 	err := logger.AddLogObserver(mockLogObserver, &logger.PlainFormatter{})
@@ -148,8 +148,8 @@ func TestRelayerShouldExecuteTransfersAndNotCatchErrors(t *testing.T) {
 	)
 }
 
-func TestRelayersShouldExecuteTransfersWithInitSupply(t *testing.T) {
-	t.Skip()
+func TestRelayersShouldExecuteEthTransfersWithCoins(t *testing.T) {
+	// t.Skip()
 	usdcToken := GenerateTestUSDCToken()
 	usdcToken.InitialSupplyValue = "100000"
 
@@ -318,7 +318,7 @@ func createBadToken() framework.TestTokenParams {
 	}
 }
 
-func TestRelayersShouldExecuteRefunds(t *testing.T) {
+func TestRelayersShouldNotExecuteInvalidEthSetup(t *testing.T) {
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createBadToken()
 		badToken.IsNativeOnPeerChain = true
@@ -341,7 +341,7 @@ func TestRelayersShouldExecuteRefunds(t *testing.T) {
 		expectedStringInLogs := "error = invalid setup isNativeOnEthereum = true, isNativeOnDharitrI = true"
 		testRelayersShouldNotExecuteTransfers(t, expectedStringInLogs, badToken)
 	})
-	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = true, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
+	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = true, isNativeOnDrT = true, isNativeOnDrT = false", func(t *testing.T) {
 		badToken := createBadToken()
 		badToken.IsNativeOnPeerChain = true
 		badToken.IsMintBurnOnPeerChain = true
