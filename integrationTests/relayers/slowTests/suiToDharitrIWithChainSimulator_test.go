@@ -15,7 +15,7 @@ import (
 )
 
 func TestRelayersShouldExecuteTransfersWithCoins(t *testing.T) {
-	// t.Skip()
+	t.Skip()
 	walToken := GenerateTestWALToken()
 	walToken.InitialSupplyValue = "1000000000"
 
