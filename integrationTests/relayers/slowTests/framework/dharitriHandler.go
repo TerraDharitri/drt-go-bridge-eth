@@ -143,7 +143,7 @@ func (handler *DharitriHandler) deployContracts(ctx context.Context, chainType C
 	// deploy aggregator
 	stakeValue, _ := big.NewInt(0).SetString(minRelayerStake, 10)
 	aggregatorDeployParams := []string{
-		"",
+		hex.EncodeToString([]byte("REWA")),
 		hex.EncodeToString(stakeValue.Bytes()),
 		"01",
 		"02",
