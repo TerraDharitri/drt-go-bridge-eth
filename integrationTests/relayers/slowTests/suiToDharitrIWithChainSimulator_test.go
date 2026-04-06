@@ -139,7 +139,7 @@ func TestSuiRelayersShouldExecuteRefunds(t *testing.T) {
 	})
 }
 
-func TestSuiRelayersShouldNotExecuteInvalidSetup(t *testing.T) {
+func TestSuiRelayersShouldNotExecuteInvalidSuiSetup(t *testing.T) {
 	// t.Skip()
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createSuiBadToken()

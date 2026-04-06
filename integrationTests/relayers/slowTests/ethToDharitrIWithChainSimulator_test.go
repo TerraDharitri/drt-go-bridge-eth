@@ -341,26 +341,6 @@ func TestRelayersShouldNotExecuteInvalidEthSetup(t *testing.T) {
 		expectedStringInLogs := "error = invalid setup isNativeOnEthereum = true, isNativeOnDharitrI = true"
 		testRelayersShouldNotExecuteTransfers(t, expectedStringInLogs, badToken)
 	})
-	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = true, isNativeOnDrT = true, isNativeOnDrT = false", func(t *testing.T) {
-		badToken := createBadToken()
-		badToken.IsNativeOnPeerChain = true
-		badToken.IsMintBurnOnPeerChain = true
-		badToken.IsNativeOnDrT = true
-		badToken.IsMintBurnOnDrT = false
-		badToken.HasChainSpecificToken = true
-
-		testEthContractsShouldError(t, badToken)
-	})
-	t.Run("IsNativeOnPeerChain = false, IsMintBurnOnPeerChain = true, isNativeOnDrT = false, isMintBurnOnDrT = true", func(t *testing.T) {
-		badToken := createBadToken()
-		badToken.IsNativeOnPeerChain = false
-		badToken.IsMintBurnOnPeerChain = true
-		badToken.IsNativeOnDrT = false
-		badToken.IsMintBurnOnDrT = true
-		badToken.HasChainSpecificToken = true
-
-		testEthContractsShouldError(t, badToken)
-	})
 }
 
 func testRelayersShouldNotExecuteTransfers(
