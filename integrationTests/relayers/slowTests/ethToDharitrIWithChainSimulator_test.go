@@ -318,7 +318,7 @@ func createBadToken() framework.TestTokenParams {
 	}
 }
 
-func testRelayersShouldNotExecuteTransfers(t *testing.T) {
+func TestRelayersShouldNotExecuteInvalidEthSetup(t *testing.T) {
 	t.Skip("This is a slow test, use -tags=slow to run it")
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createBadToken()
