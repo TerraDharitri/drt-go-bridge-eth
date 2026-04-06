@@ -15,7 +15,7 @@ import (
 )
 
 func TestRelayersShouldExecuteTransfersWithCoins(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	walToken := GenerateTestWALToken()
 	walToken.InitialSupplyValue = "1000000000"
 
@@ -31,7 +31,7 @@ func TestRelayersShouldExecuteTransfersWithCoins(t *testing.T) {
 }
 
 func TestRelayersShouldExecuteTransfersWithTokens(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	xmnToken := GenerateTestLKXMNToken()
 	xmnToken.InitialSupplyValue = "1000000000"
 
@@ -43,7 +43,7 @@ func TestRelayersShouldExecuteTransfersWithTokens(t *testing.T) {
 }
 
 func TestRelayerShouldExecuteTransfersAndNotCatchErrorsSui(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	errorString := "ERROR"
 	mockLogObserver := mock.NewMockLogObserver(errorString)
 	err := logger.AddLogObserver(mockLogObserver, &logger.PlainFormatter{})
@@ -114,7 +114,7 @@ func createSuiBadToken() framework.TestTokenParams {
 }
 
 func TestRelayersShouldNotExecuteTransfersSui(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createSuiBadToken()
 		badToken.IsNativeOnPeerChain = true
