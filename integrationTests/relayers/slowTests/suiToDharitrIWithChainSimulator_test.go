@@ -114,7 +114,7 @@ func createSuiBadToken() framework.TestTokenParams {
 }
 
 func TestRelayersShouldNotExecuteTransfersSui(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	t.Run("IsNativeOnPeerChain = true, IsMintBurnOnPeerChain = false, isNativeOnDrT = true, isMintBurnOnDrT = false", func(t *testing.T) {
 		badToken := createSuiBadToken()
 		badToken.IsNativeOnPeerChain = true
